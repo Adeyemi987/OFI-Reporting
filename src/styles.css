@@ -1,1 +1,162 @@
-/* You can add global styles to this file, and also import other style files */
+/* ─── OFI Reporting — Global Styles ─────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --primary: #D047AE;
+  --secondary: #E068C4;
+  --bg: #FFFFFF;
+  --text: #1A1A1A;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --surface: #F8FAFC;
+  --surface-card: #FFFFFF;
+  --surface-hover: #FDF2FB;
+  --border: #E5E7EB;
+  --border-light: #F3F4F6;
+  --input-bg: #F9FAFB;
+  --header-bg: #FFFFFF;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.10);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.14);
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.08);
+  --radius: 12px;
+  --radius-lg: 20px;
+  --scrollbar-thumb: #CBD5E1;
+  --scrollbar-hover: #94A3B8;
+}
+
+:root[data-theme="dark"] {
+  --bg: #111827;
+  --text: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --text-muted: #9CA3AF;
+  --surface: #1F2937;
+  --surface-card: #1F2937;
+  --surface-hover: rgba(255,255,255,0.06);
+  --border: #374151;
+  --border-light: #374151;
+  --input-bg: #374151;
+  --header-bg: #111827;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.3);
+  --scrollbar-thumb: #4B5563;
+  --scrollbar-hover: #6B7280;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--surface);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a { text-decoration: none; color: inherit; }
+
+button { font-family: inherit; }
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+/* ─── Utility animations ─────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ─── Focus ring ─────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+
+/* ─── Table reset ────────────────────────────────────────────────── */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+  font-weight: 700;
+  text-align: left;
+}
+
+/* ─── View transitions ───────────────────────────────────────────── */
+::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: 0.25s;
+}
+
+/* ─── Responsive breakpoints ─────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .ofi-sidebar { width: 64px !important; }
+  .ofi-main-content { padding: 16px !important; }
+}
+
+@media (max-width: 768px) {
+  .ofi-sidebar {
+    position: fixed !important;
+    left: -260px;
+    transition: left 0.3s ease !important;
+    z-index: 200 !important;
+  }
+  .ofi-sidebar.open {
+    left: 0 !important;
+    width: 240px !important;
+  }
+  .ofi-sidebar-overlay {
+    display: block !important;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 150;
+  }
+  .ofi-main-content { padding: 12px !important; }
+  .ofi-header { padding: 0 12px !important; }
+}
+
+@media (max-width: 480px) {
+  .ofi-main-content { padding: 8px !important; }
+}
