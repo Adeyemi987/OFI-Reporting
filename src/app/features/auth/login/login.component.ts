@@ -11,53 +11,77 @@ import { AuthService } from '../../../core/services/auth.service';
   template: `
     <div style="
       min-height: 100vh;
-      background: linear-gradient(135deg, #5A1E4A 0%, #D047AE 40%, #E068C4 100%);
+      background: #821E75;
       display: flex; align-items: center; justify-content: center;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       position: relative; overflow: hidden;
     ">
-      <!-- Animated background orbs -->
-      <div style="
-        position: absolute; width: 600px; height: 600px;
-        background: radial-gradient(circle, rgba(224,104,196,0.15) 0%, transparent 70%);
-        top: -200px; right: -200px; border-radius: 50%;
-        animation: pulse 4s ease-in-out infinite;
-      "></div>
-      <div style="
-        position: absolute; width: 400px; height: 400px;
-        background: radial-gradient(circle, rgba(208,71,174,0.2) 0%, transparent 70%);
-        bottom: -100px; left: -100px; border-radius: 50%;
-        animation: pulse 6s ease-in-out infinite reverse;
-      "></div>
+      <!-- Layered radial gradient mesh -->
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 65% at 12% 50%,#B82EA8 0%,transparent 55%),radial-gradient(ellipse 55% 65% at 88% 15%,#9A1E8A 0%,transparent 50%),radial-gradient(ellipse 55% 60% at 55% 95%,#C040B0 0%,transparent 52%);pointer-events:none;"></div>
+
+      <!-- Dot-grid overlay -->
+      <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,0.22) 1px,transparent 1px);background-size:38px 38px;pointer-events:none;"></div>
+
+      <!-- Decorative rings — top-right -->
+      <div style="position:absolute;top:-180px;right:-180px;width:520px;height:520px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);pointer-events:none;"></div>
+      <div style="position:absolute;top:-100px;right:-100px;width:360px;height:360px;border-radius:50%;border:1px solid rgba(255,255,255,0.14);pointer-events:none;"></div>
+      <!-- Decorative rings — bottom-left -->
+      <div style="position:absolute;bottom:-200px;left:-200px;width:560px;height:560px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.16);pointer-events:none;"></div>
+      <div style="position:absolute;bottom:-120px;left:-120px;width:380px;height:380px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);pointer-events:none;"></div>
+
+      <!-- Floating glow orbs -->
+      <div style="position:absolute;top:-70px;left:6%;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(220,100,200,0.55) 0%,transparent 68%);animation:floatOrb 9s ease-in-out infinite;pointer-events:none;"></div>
+      <div style="position:absolute;bottom:4%;right:8%;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(200,60,180,0.5) 0%,transparent 68%);animation:floatOrb 7s ease-in-out infinite reverse;pointer-events:none;"></div>
+      <div style="position:absolute;top:38%;left:62%;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(240,120,220,0.45) 0%,transparent 68%);animation:floatOrb 11s ease-in-out infinite;animation-delay:-4s;pointer-events:none;"></div>
+      <div style="position:absolute;top:15%;right:30%;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(255,200,245,0.35) 0%,transparent 70%);animation:floatOrb 13s ease-in-out infinite reverse;animation-delay:-2s;pointer-events:none;"></div>
+
+      <!-- Diagonal light streak -->
+      <div style="position:absolute;top:0;left:45%;width:1.5px;height:100%;background:linear-gradient(180deg,transparent 0%,rgba(255,200,240,0.25) 40%,rgba(255,200,240,0.15) 60%,transparent 100%);transform:rotate(22deg);transform-origin:top center;pointer-events:none;"></div>
+      <div style="position:absolute;top:0;left:55%;width:1px;height:100%;background:linear-gradient(180deg,transparent 0%,rgba(255,220,248,0.18) 50%,transparent 100%);transform:rotate(-18deg);transform-origin:top center;pointer-events:none;"></div>
+
+      <!-- Small sparkle dots -->
+      <div style="position:absolute;top:18%;left:22%;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.75);animation:sparkle 3s ease-in-out infinite;"></div>
+      <div style="position:absolute;top:72%;left:78%;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.7);animation:sparkle 4s ease-in-out infinite;animation-delay:-1.5s;"></div>
+      <div style="position:absolute;top:45%;left:88%;width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.6);animation:sparkle 5s ease-in-out infinite;animation-delay:-0.8s;"></div>
+      <div style="position:absolute;top:85%;left:15%;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.65);animation:sparkle 3.5s ease-in-out infinite;animation-delay:-2s;"></div>
 
       <!-- Login Card -->
       <div style="
-        background: rgba(255,255,255,0.97);
-        border-radius: 24px;
-        padding: 48px 44px;
-        width: 100%; max-width: 420px;
-        box-shadow: 0 32px 80px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.967);
+        border-radius: 28px;
+        padding: 52px 46px;
+        width: 100%; max-width: 432px;
+        box-shadow: 0 48px 120px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.14), inset 0 1px 0 rgba(255,255,255,0.8);
         position: relative; z-index: 1;
-        backdrop-filter: blur(20px);
-        animation: slideUp 0.5s ease-out;
+        animation: slideUp 0.65s cubic-bezier(0.22,1,0.36,1);
       ">
-        <!-- Logo -->
-        <div style="text-align: center; margin-bottom: 32px;">
+        <!-- OFI Logo -->
+        <div style="text-align:center;margin-bottom:36px;">
           <div style="
-            display: inline-flex; align-items: center; justify-content: center;
-            width: 72px; height: 72px;
-            background: linear-gradient(135deg, #D047AE, #E068C4);
-            border-radius: 20px;
-            box-shadow: 0 8px 24px rgba(208,71,174,0.4);
-            margin-bottom: 16px;
+            display:inline-flex;align-items:center;justify-content:center;
+            padding:18px 28px;
+            background:linear-gradient(135deg,#6B1561 0%,#821E75 50%,#9A248A 100%);
+            border-radius:22px;
+            box-shadow:0 10px 40px rgba(130,30,117,0.45),inset 0 1px 0 rgba(255,255,255,0.15);
+            margin-bottom:20px;
           ">
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-              <circle cx="18" cy="18" r="16" fill="white" fill-opacity="0.2"/>
-              <path d="M10 26 L18 10 L26 26 M13 21 H23" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg width="130" height="58" viewBox="0 0 100 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- o ring with person -->
+              <circle cx="20" cy="19" r="17" stroke="white" stroke-width="3.5" fill="none"/>
+              <circle cx="20" cy="13.5" r="5.8" fill="white"/>
+              <path d="M7 31 C7 24 33 24 33 31" fill="white"/>
+              <!-- f -->
+              <path d="M47.5 7 C48 3.5 50.5 1.5 54.5 1.5 C56.5 1.5 57.8 2.2 57.8 2.2 L57.8 5.5 C56.6 5 55.3 4.4 54 4.4 C51.6 4.4 50.8 5.8 50.8 7.5 L50.8 12.8 L57 12.8 L57 16 L50.8 16 L50.8 38.5 L47.5 38.5 Z" fill="white"/>
+              <!-- i dot -->
+              <circle cx="66" cy="5" r="3.5" fill="white"/>
+              <!-- i body -->
+              <rect x="62.5" y="12.5" width="7" height="26" rx="0.5" fill="white"/>
+              <!-- make it real -->
+              <text x="1" y="46" font-family="Georgia, 'Times New Roman', Times, serif" font-style="italic" font-size="11" fill="rgba(255,255,255,0.88)" letter-spacing="0.9">make it real</text>
             </svg>
           </div>
-          <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #1A1A1A; letter-spacing: -0.5px;">OFI Reporting</h1>
-          <p style="margin: 6px 0 0; color: #6B7280; font-size: 14px; font-weight: 400;">Organizational Reporting System</p>
+          <h1 style="margin:0;font-size:25px;font-weight:800;color:#1A1A1A;letter-spacing:-0.4px;">Welcome back</h1>
+          <p style="margin:7px 0 0;color:#6B7280;font-size:13.5px;">Sign in to OFI Reporting System</p>
         </div>
 
         <!-- Error alert -->
@@ -146,10 +170,10 @@ import { AuthService } from '../../../core/services/auth.service';
             [disabled]="loading()"
             style="
               padding: 14px;
-              background: linear-gradient(135deg, #D047AE, #E068C4);
+              background: linear-gradient(135deg, #821E75, #9A248A);
               color: white; border: none; border-radius: 12px;
               font-size: 15px; font-weight: 700; cursor: pointer;
-              box-shadow: 0 4px 16px rgba(208,71,174,0.4);
+              box-shadow: 0 4px 18px rgba(130,30,117,0.45);
               transition: all 0.2s; opacity: 1;
               display: flex; align-items: center; justify-content: center; gap: 8px;
             "
@@ -166,67 +190,28 @@ import { AuthService } from '../../../core/services/auth.service';
           </button>
         </form>
 
-        <!-- Demo credentials -->
-        <div style="
-          margin-top: 28px; padding: 16px;
-          background: linear-gradient(135deg, #FDF2FB, #FADDF2);
-          border: 1px solid #F0B8E0; border-radius: 12px;
-        ">
-          <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #D047AE; text-transform: uppercase; letter-spacing: 0.5px;">
-            Demo Credentials
-          </p>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-            @for (cred of demoCreds; track cred.role) {
-              <button (click)="fillDemo(cred.email)" class="demo-cred-btn" style="
-                text-align: left; padding: 6px 10px;
-                background: white; border: 1px solid #F0B8E0; border-radius: 8px;
-                cursor: pointer; transition: all 0.15s;
-                font-size: 11px; color: #374151; font-family: inherit;
-              "
-              >
-                <span style="font-weight: 700; color: #D047AE;">{{ cred.role }}</span><br/>
-                {{ cred.email }}
-              </button>
-            }
-          </div>
-        </div>
       </div>
 
       <style>
-        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } }
+        @keyframes slideUp { from { opacity:0; transform:translateY(48px) scale(0.96); } to { opacity:1; transform:none; } }
+        @keyframes floatOrb { 0%,100% { transform:translate(0,0) scale(1); } 33% { transform:translate(22px,-28px) scale(1.05); } 66% { transform:translate(-16px,18px) scale(0.97); } }
+        @keyframes sparkle { 0%,100% { opacity:0.4; transform:scale(1); } 50% { opacity:1; transform:scale(1.6); } }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-        button[type=submit]:hover:not(:disabled) { transform: translateY(-1px) !important; box-shadow: 0 8px 24px rgba(208,71,174,0.5) !important; }
-        .demo-cred-btn:hover { background: #FDF2FB !important; border-color: #E068C4 !important; }
-        input[type=email]:focus, input[type=password]:focus, input[type=text]:focus { border-color: #E068C4 !important; box-shadow: 0 0 0 3px rgba(224,104,196,0.15) !important; background: white !important; }
+        button[type=submit]:hover:not(:disabled) { transform: translateY(-2px) !important; box-shadow: 0 10px 30px rgba(130,30,117,0.5) !important; }
+        input[type=email]:focus, input[type=password]:focus, input[type=text]:focus { border-color: #821E75 !important; box-shadow: 0 0 0 3px rgba(130,30,117,0.15) !important; background: white !important; }
       </style>
     </div>
   `
 })
 export class LoginComponent {
   email = '';
-  password = 'password';
+  password = '';
   loading = signal(false);
   showPassword = signal(false);
   errorMessage = signal('');
 
-  demoCreds = [
-    { role: 'CH', email: 'ch@ofi.com' },
-    { role: 'SH', email: 'sh@ofi.com' },
-    { role: 'CSH', email: 'csh@ofi.com' },
-    { role: 'GL', email: 'gl@ofi.com' },
-    { role: 'PC', email: 'pc@ofi.com' },
-    { role: 'FC', email: 'fc@ofi.com' },
-  ];
-
   constructor(private authService: AuthService, private router: Router) {}
-
-  fillDemo(email: string): void {
-    this.email = email;
-    this.password = 'password';
-    this.errorMessage.set('');
-  }
 
   onLogin(): void {
     if (!this.email || !this.password) {

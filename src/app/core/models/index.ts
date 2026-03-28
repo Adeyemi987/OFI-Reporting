@@ -52,6 +52,23 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
+// Shape returned by POST /api/Auth/login
+export interface LoginApiData {
+  token: string;
+  refreshToken: string;
+  expiresAt: string;
+  userId: string;
+  fullName: string;
+  role: UserRole;
+}
+
+export interface LoginApiResponse {
+  success: boolean;
+  message: string;
+  data: LoginApiData;
+  errors: unknown;
+}
+
 // ─── Report Models ──────────────────────────────────────────────────────────────
 export type TaskCategory = 'GAP' | 'GEP' | 'GSP';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'flagged';
@@ -130,10 +147,44 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
+export interface ApiResult<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  errors: unknown;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+// ─── Dashboard API Response ────────────────────────────────────────────────────
+export interface DashboardApiReport {
+  reportId: string;
+  userName: string;
+  status: number;
+  farmersVisited: number;
+  gapCount: number;
+  gepCount: number;
+  gspCount: number;
+  trainingSessions: number;
+  trainingAttendees: number;
+  weekNumber: number;
+  year: number;
+}
+
+export interface DashboardApiData {
+  totalFarmersVisited: number;
+  gapTaskCount: number;
+  gepTaskCount: number;
+  gspTaskCount: number;
+  totalTrainingSessions: number;
+  totalTrainingAttendees: number;
+  pendingReportCount: number;
+  approvedReportCount: number;
+  subordinateReports: DashboardApiReport[];
 }

@@ -1,24 +1,21 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, of, throwError, delay } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
 import {
-  AuthState, User, LoginRequest, LoginResponse, UserRole
+  AuthState, User, LoginRequest, LoginResponse, LoginApiResponse, UserRole
 } from '../models';
-
-const MOCK_USERS: User[] = [
-  { id: 'ch1', fullName: 'Dr. Amara Osei', email: 'ch@ofi.com', role: 'CH', isActive: true, region: 'West Africa' },
-  { id: 'sh1', fullName: 'Kwame Mensah', email: 'sh@ofi.com', role: 'SH', isActive: true, managerId: 'ch1', region: 'Ghana' },
-  { id: 'csh1', fullName: 'Akosua Boateng', email: 'csh@ofi.com', role: 'CSH', isActive: true, managerId: 'sh1', region: 'Ashanti' },
-  { id: 'gl1', fullName: 'Emmanuel Darko', email: 'gl@ofi.com', role: 'GL', isActive: true, managerId: 'csh1', region: 'Central' },
-  { id: 'pc1', fullName: 'Abena Ofori', email: 'pc@ofi.com', role: 'PC', isActive: true, managerId: 'gl1', region: 'Kumasi' },
-  { id: 'fc1', fullName: 'Kofi Asante', email: 'fc@ofi.com', role: 'FC', isActive: true, managerId: 'pc1', region: 'Kumasi North' },
-];
+import { API_BASE_URL } from '../tokens';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly TOKEN_KEY = 'ofi_auth_token';
   private readonly USER_KEY = 'ofi_auth_user';
+
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = inject(API_BASE_URL);
+  private readonly router = inject(Router);
 
   private _authState = signal<AuthState>({
     user: null,
@@ -31,7 +28,7 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this._authState().isAuthenticated);
   readonly currentRole = computed(() => this._authState().user?.role ?? null);
 
-  constructor(private router: Router) {
+  constructor() {
     this.restoreSession();
   }
 
@@ -49,21 +46,28 @@ export class AuthService {
   }
 
   login(request: LoginRequest): Observable<LoginResponse> {
-    const user = MOCK_USERS.find(u => u.email === request.email);
-    if (!user) return throwError(() => new Error('Invalid credentials'));
-
-    const response: LoginResponse = {
-      user,
-      token: 'Bearer mock_jwt_' + Date.now(),
-      refreshToken: 'refresh_' + Date.now()
-    };
-
-    return of(response).pipe(
-      delay(800),
+    return this.http.post<LoginApiResponse>(`${this.baseUrl}/api/Auth/login`, request).pipe(
+      map(res => {
+        if (!res.success) throw new Error(res.message ?? 'Login failed.');
+        const { token, refreshToken, userId, fullName, role } = res.data;
+        const bearerToken = `Bearer ${token}`;
+        const user: User = {
+          id: userId,
+          fullName,
+          email: request.email,
+          role,
+          isActive: true
+        };
+        return { user, token: bearerToken, refreshToken };
+      }),
       tap(res => {
         localStorage.setItem(this.TOKEN_KEY, res.token);
         localStorage.setItem(this.USER_KEY, JSON.stringify(res.user));
         this._authState.set({ user: res.user, token: res.token, isAuthenticated: true });
+      }),
+      catchError(err => {
+        const message = err?.error?.message ?? err?.message ?? 'Invalid credentials.';
+        return throwError(() => new Error(message));
       })
     );
   }

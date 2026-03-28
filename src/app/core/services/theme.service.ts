@@ -2,7 +2,7 @@ import { Injectable, signal, computed, effect } from '@angular/core';
 
 const ACCENT_KEY = 'ofi_accent_color';
 const THEME_KEY = 'ofi_theme_mode';
-const DEFAULT_ACCENT = '#D047AE';
+const DEFAULT_ACCENT = '#821E75';
 
 export type ThemeMode = 'Light' | 'Dark' | 'System';
 
