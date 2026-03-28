@@ -71,7 +71,30 @@ export interface LoginApiResponse {
 
 // ─── Report Models ──────────────────────────────────────────────────────────────
 export type TaskCategory = 'GAP' | 'GEP' | 'GSP';
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'flagged';
+export type ApprovalStatus =
+  | 'pending_fc' | 'pending_pc' | 'pending_gl'
+  | 'pending_csh' | 'pending_sh' | 'pending_ch'
+  | 'approved' | 'rejected';
+
+// Numeric API status → which status code means "ready for this role to approve"
+export const ROLE_READY_STATUS: Partial<Record<UserRole, number>> = {
+  FC:  6,  // FO  status must be Approved (6)
+  PC:  1,  // FC  status must be PendingPCApproval (1)
+  GL:  2,  // PC  status must be PendingGLApproval (2)
+  CSH: 3,  // GL  status must be PendingCSHApproval (3)
+  SH:  4,  // CSH status must be PendingSHApproval (4)
+  CH:  5,  // SH  status must be PendingCHApproval (5)
+};
+
+// Mapped ApprovalStatus string → which status means "ready for this role to approve"
+export const ROLE_READY_MAPPED_STATUS: Partial<Record<UserRole, ApprovalStatus>> = {
+  FC:  'approved',    // FO must be fully Approved
+  PC:  'pending_pc',  // FC must be PendingPCApproval
+  GL:  'pending_gl',  // PC must be PendingGLApproval
+  CSH: 'pending_csh', // GL must be PendingCSHApproval
+  SH:  'pending_sh',  // CSH must be PendingSHApproval
+  CH:  'pending_ch',  // SH must be PendingCHApproval
+};
 
 export interface TrainingSession {
   id: string;
@@ -119,7 +142,9 @@ export interface SubordinateReport {
 }
 
 export interface DashboardSummary {
-  totalSubordinates: number;
+  totalSubordinates: number;      // from /api/Users/subordinates totalCount
+  reportSubmittedCount: number;   // pendingReportCount + approvedReportCount from dashboard API
+  allSubmitted: boolean;          // reportSubmittedCount === totalSubordinates
   totalFarmersVisited: number;
   totalGAP: number;
   totalGEP: number;
@@ -127,8 +152,15 @@ export interface DashboardSummary {
   pendingApprovals: number;
   approvedCount: number;
   canApprove: boolean;
+  isWeeklyReportSent: boolean;
   lastUpdated: string;
   subordinates: SubordinateReport[];
+}
+
+// ─── Subordinates list API ─────────────────────────────────────────────────────
+export interface SubordinatesApiData {
+  totalCount: number;
+  items: unknown[];
 }
 
 // ─── Download Report ───────────────────────────────────────────────────────────
@@ -166,7 +198,7 @@ export interface PaginatedResponse<T> {
 export interface DashboardApiReport {
   reportId: string;
   userName: string;
-  status: number;
+  status: number | string;  // API may return numeric (0–7) or string enum name
   farmersVisited: number;
   gapCount: number;
   gepCount: number;
@@ -186,5 +218,6 @@ export interface DashboardApiData {
   totalTrainingAttendees: number;
   pendingReportCount: number;
   approvedReportCount: number;
+  isWeeklyReportSent: boolean;
   subordinateReports: DashboardApiReport[];
 }

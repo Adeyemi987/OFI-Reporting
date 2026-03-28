@@ -227,129 +227,149 @@ export type DateRange = 'week' | 'month' | 'quarter' | 'year' | 'all';
         </div>
 
         <!-- ── Performance Leaderboard ────────────────────────── -->
-        <div class="chart-card" style="
-          background:white;border-radius:24px;padding:32px;
-          box-shadow:0 8px 32px rgba(0,0,0,0.08);border:1px solid #F3F4F6;
+        <div style="
+          background:linear-gradient(160deg,#0F0C29 0%,#302B63 55%,#1A1040 100%);
+          border-radius:28px;overflow:hidden;
+          box-shadow:0 20px 64px rgba(15,12,41,0.5),0 0 0 1px rgba(255,255,255,0.08);
           animation:cardFloat3D 0.5s cubic-bezier(0.4,0,0.2,1) 0.4s both;
-          overflow:hidden;
         ">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#F59E0B,#EAB308);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(245,158,11,0.3);">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-              </div>
+          <!-- Header -->
+          <div style="
+            padding:20px 32px;display:flex;align-items:center;justify-content:space-between;
+            border-bottom:1px solid rgba(255,255,255,0.08);
+          ">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="font-size:36px;line-height:1;">🏆</div>
               <div>
-                <h3 style="margin:0;font-size:18px;font-weight:900;color:#1A1A1A;">Performance Leaderboard</h3>
-                <p style="margin:2px 0 0;font-size:11px;color:#9CA3AF;font-weight:500;">Ranked by total farmers visited</p>
+                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);letter-spacing:4px;text-transform:uppercase;margin-bottom:2px;">Hall of Champions</div>
+                <div style="font-size:18px;font-weight:900;color:white;letter-spacing:-0.3px;">Performance Leaderboard</div>
               </div>
             </div>
-            <div style="padding:4px 12px;border-radius:20px;background:linear-gradient(135deg,#FDF2FB,#FADDF2);border:1px solid #F0B8E0;font-size:11px;font-weight:700;color:#C2389A;">
-              {{ leaderboard().length }} Contestants
+            <div style="text-align:right;">
+              <div style="font-size:22px;font-weight:900;color:#FFD700;line-height:1;">{{ leaderboard().length }}</div>
+              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;">Contestants</div>
             </div>
           </div>
 
-          <!-- Podium for top 3 -->
+          <!-- Podium top 3 -->
           @if (leaderboard().length >= 3) {
-            <div style="display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-bottom:32px;padding:20px 0 0;">
-              <!-- 2nd Place - SILVER -->
-              <div style="display:flex;flex-direction:column;align-items:center;animation:podiumRise 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;">
-                <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#C0C0C0,#A8A8A8);border:3px solid #D4D4D4;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:white;box-shadow:0 4px 16px rgba(192,192,192,0.5);margin-bottom:8px;">
-                  🥈
-                </div>
-                <div style="font-size:12px;font-weight:700;color:#1A1A1A;text-align:center;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ leaderboard()[1].name }}</div>
-                <div style="font-size:18px;font-weight:900;color:#71717A;margin:2px 0;">{{ leaderboard()[1].farmers }}</div>
-                <div style="font-size:10px;color:#A1A1AA;font-weight:600;">farmers</div>
-                <div style="width:90px;height:80px;margin-top:10px;border-radius:12px 12px 0 0;background:linear-gradient(180deg,#C0C0C0,#D4D4D4);display:flex;align-items:center;justify-content:center;">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white" opacity="0.7"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-                </div>
-              </div>
-              <!-- 1st Place - GOLD -->
-              <div style="display:flex;flex-direction:column;align-items:center;animation:podiumRise 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.1s both;">
-                <div style="position:relative;">
-                  <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:22px;animation:crownBounce 1s ease-in-out infinite;">👑</div>
-                  <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#DAA520);border:4px solid #FFE44D;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:white;box-shadow:0 6px 24px rgba(255,215,0,0.5);margin-bottom:8px;margin-top:10px;">
-                    🥇
+            <div style="padding:48px 24px 36px;position:relative;">
+              <div style="position:absolute;top:50px;left:50%;transform:translateX(-50%);width:240px;height:140px;background:radial-gradient(ellipse,rgba(255,215,0,0.1) 0%,transparent 70%);pointer-events:none;"></div>
+              <div style="display:flex;align-items:flex-end;justify-content:center;gap:4px;position:relative;z-index:1;">
+
+                <!-- 🥈 2nd Place -->
+                <div style="display:flex;flex-direction:column;align-items:center;animation:podiumRise 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.3s both;flex:1;max-width:160px;">
+                  <div style="font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;color:rgba(200,206,212,0.7);">2nd</div>
+                  <div style="position:relative;margin-bottom:10px;">
+                    <div style="width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#9EA4AA,#C8CDD2);border:3px solid #D6DCE2;box-shadow:0 0 24px rgba(192,192,192,0.35),inset 0 1px 0 rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:white;letter-spacing:-0.5px;">{{ leaderboardInitials(1) }}</div>
+                    <div style="position:absolute;bottom:-5px;right:-5px;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#B8BEC4,#7A8088);border:2px solid #1A1040;display:flex;align-items:center;justify-content:center;font-size:11px;">🥈</div>
+                  </div>
+                  <div style="font-size:12px;font-weight:700;color:#E0E4E8;text-align:center;max-width:130px;word-break:break-word;line-height:1.2;margin-bottom:4px;">{{ leaderboard()[1].name }}</div>
+                  <div style="font-size:22px;font-weight:900;color:#BDC4CC;margin-bottom:2px;line-height:1;">{{ leaderboard()[1].farmers }}</div>
+                  <div style="font-size:9px;color:rgba(255,255,255,0.25);font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">farmers</div>
+                  <div style="width:100%;height:82px;background:linear-gradient(180deg,rgba(180,186,192,0.18) 0%,rgba(140,148,155,0.06) 100%);border:1px solid rgba(180,186,192,0.22);border-bottom:none;border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;">
+                    <span style="font-size:34px;font-weight:900;color:rgba(180,186,192,0.15);line-height:1;">2</span>
                   </div>
                 </div>
-                <div style="font-size:13px;font-weight:800;color:#1A1A1A;text-align:center;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ leaderboard()[0].name }}</div>
-                <div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#FFD700,#B8860B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:2px 0;">{{ leaderboard()[0].farmers }}</div>
-                <div style="font-size:10px;color:#B8860B;font-weight:700;">farmers</div>
-                <div style="width:100px;height:110px;margin-top:10px;border-radius:12px 12px 0 0;background:linear-gradient(180deg,#FFD700,#FFF0A0);border:2px solid #DAA520;border-bottom:none;display:flex;align-items:center;justify-content:center;">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="#DAA520"><path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5ZM19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z"/></svg>
+
+                <!-- 🥇 1st Place (center, tallest) -->
+                <div style="display:flex;flex-direction:column;align-items:center;animation:podiumRise 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both;flex:1;max-width:180px;z-index:2;">
+                  <!-- Crown -->
+                  <div style="font-size:28px;line-height:1;margin-bottom:4px;animation:crownBounce 1.5s ease-in-out infinite;filter:drop-shadow(0 0 10px rgba(255,215,0,0.9));">👑</div>
+                  <div style="font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;color:#FFD700;">Champion</div>
+                  <!-- Avatar -->
+                  <div style="position:relative;margin-bottom:16px;">
+                    <div style="position:absolute;inset:-10px;border-radius:50%;border:2px solid rgba(255,215,0,0.2);animation:pulseRing 2s ease-in-out infinite;"></div>
+                    <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#E8A400,#FFD700,#FFBB00);border:4px solid #FFE870;box-shadow:0 0 40px rgba(255,215,0,0.6),0 0 80px rgba(255,165,0,0.2),inset 0 1px 0 rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#5C3500;letter-spacing:-0.5px;">{{ leaderboardInitials(0) }}</div>
+                    <div style="position:absolute;bottom:-8px;right:-8px;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#B8860B);border:2px solid #1A1040;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px rgba(255,215,0,0.4);">🥇</div>
+                  </div>
+                  <!-- Name — always visible -->
+                  <div style="
+                    font-size:15px;font-weight:900;text-align:center;
+                    color:#FFD700;
+                    text-shadow:0 0 16px rgba(255,215,0,0.6),0 1px 4px rgba(0,0,0,0.8);
+                    margin-bottom:6px;
+                    max-width:160px;word-break:break-word;line-height:1.3;
+                  ">{{ leaderboard()[0].name }}</div>
+                  <div style="font-size:30px;font-weight:900;color:#FFD700;margin-bottom:2px;line-height:1.1;">{{ leaderboard()[0].farmers }}</div>
+                  <div style="font-size:9px;color:rgba(255,215,0,0.4);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">farmers</div>
                 </div>
-              </div>
-              <!-- 3rd Place - BRONZE -->
-              <div style="display:flex;flex-direction:column;align-items:center;animation:podiumRise 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.3s both;">
-                <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#CD7F32,#A0522D);border:3px solid #D4944E;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:white;box-shadow:0 4px 16px rgba(205,127,50,0.5);margin-bottom:8px;">
-                  🥉
-                </div>
-                <div style="font-size:12px;font-weight:700;color:#1A1A1A;text-align:center;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ leaderboard()[2].name }}</div>
-                <div style="font-size:18px;font-weight:900;color:#8B4513;margin:2px 0;">{{ leaderboard()[2].farmers }}</div>
-                <div style="font-size:10px;color:#A0522D;font-weight:600;">farmers</div>
-                <div style="width:90px;height:60px;margin-top:10px;border-radius:12px 12px 0 0;background:linear-gradient(180deg,#CD7F32,#DEB887);display:flex;align-items:center;justify-content:center;">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white" opacity="0.7"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+
+                <!-- 🥉 3rd Place -->
+                <div style="display:flex;flex-direction:column;align-items:center;animation:podiumRise 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.5s both;flex:1;max-width:160px;">
+                  <div style="font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;color:rgba(205,127,50,0.6);">3rd</div>
+                  <div style="position:relative;margin-bottom:10px;">
+                    <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#B87333,#D4944E);border:3px solid #D4944E;box-shadow:0 0 20px rgba(205,127,50,0.3),inset 0 1px 0 rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#FFF8F0;letter-spacing:-0.5px;">{{ leaderboardInitials(2) }}</div>
+                    <div style="position:absolute;bottom:-5px;right:-5px;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#CD7F32,#8B4513);border:2px solid #1A1040;display:flex;align-items:center;justify-content:center;font-size:10px;">🥉</div>
+                  </div>
+                  <div style="font-size:12px;font-weight:700;color:#DEB887;text-align:center;max-width:130px;word-break:break-word;line-height:1.2;margin-bottom:4px;">{{ leaderboard()[2].name }}</div>
+                  <div style="font-size:20px;font-weight:900;color:#CD7F32;margin-bottom:2px;line-height:1;">{{ leaderboard()[2].farmers }}</div>
+                  <div style="font-size:9px;color:rgba(205,127,50,0.35);font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">farmers</div>
+                  <div style="width:100%;height:58px;background:linear-gradient(180deg,rgba(205,127,50,0.18) 0%,rgba(139,69,19,0.05) 100%);border:1px solid rgba(205,127,50,0.22);border-bottom:none;border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;">
+                    <span style="font-size:26px;font-weight:900;color:rgba(205,127,50,0.18);line-height:1;">3</span>
+                  </div>
                 </div>
               </div>
             </div>
           }
 
-          <!-- Full Ranking List -->
-          <div style="display:flex;flex-direction:column;gap:0;">
-            @for (sub of leaderboard(); track sub.name; let i = $index) {
-              <div class="leader-row" [style]="'display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);animation:rankSlideIn 0.4s ease ' + (i*0.07) + 's both;cursor:pointer;' +
-                (i === 0 ? 'background:linear-gradient(135deg,#FFFBEB,#FFF8DC);border:1.5px solid #FFD700;margin-bottom:6px;' :
-                 i === 1 ? 'background:linear-gradient(135deg,#FAFAFA,#F5F5F5);border:1.5px solid #C0C0C0;margin-bottom:6px;' :
-                 i === 2 ? 'background:linear-gradient(135deg,#FFF8F0,#FDEBD0);border:1.5px solid #CD7F32;margin-bottom:6px;' :
-                 'background:#FAFAFA;border:1.5px solid #F3F4F6;margin-bottom:6px;')">
-                <!-- Rank Badge -->
-                <div [style]="'width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0;' +
-                  (i === 0 ? 'background:linear-gradient(135deg,#FFD700,#DAA520);color:white;box-shadow:0 3px 10px rgba(255,215,0,0.4);' :
-                   i === 1 ? 'background:linear-gradient(135deg,#C0C0C0,#A8A8A8);color:white;box-shadow:0 3px 10px rgba(192,192,192,0.4);' :
-                   i === 2 ? 'background:linear-gradient(135deg,#CD7F32,#A0522D);color:white;box-shadow:0 3px 10px rgba(205,127,50,0.4);' :
-                   'background:#F3F4F6;color:#6B7280;')">
-                  @if (i === 0) { <span>🥇</span> }
-                  @else if (i === 1) { <span>🥈</span> }
-                  @else if (i === 2) { <span>🥉</span> }
-                  @else { <span>{{ i + 1 }}</span> }
-                </div>
-
-                <!-- Name & Progress -->
-                <div style="flex:1;min-width:0;">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                    <span [style]="'font-size:13px;font-weight:' + (i < 3 ? '800' : '600') + ';color:#1A1A1A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'">{{ sub.name }}</span>
-                    <span [style]="'font-size:15px;font-weight:900;' +
-                      (i === 0 ? 'color:#B8860B;' : i === 1 ? 'color:#71717A;' : i === 2 ? 'color:#8B4513;' : 'color:#D047AE;')">
-                      {{ sub.farmers }}
-                    </span>
+          <!-- Full Rankings -->
+          <div style="padding:28px 24px 28px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+              <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+              <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.22);letter-spacing:3px;text-transform:uppercase;">Full Rankings</span>
+              <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              @for (sub of leaderboard(); track sub.name; let i = $index) {
+                <div class="leader-row" [style]="'display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;transition:all 0.3s;animation:rankSlideIn 0.4s ease ' + (i*0.07) + 's both;cursor:pointer;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);'">
+                  <!-- Rank Badge -->
+                  <div [style]="'width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;' +
+                    (i === 0 ? 'background:linear-gradient(135deg,#FFD700,#C8960C);box-shadow:0 4px 12px rgba(255,215,0,0.3);color:white;' :
+                     i === 1 ? 'background:linear-gradient(135deg,#B8BEC4,#8A9099);box-shadow:0 4px 10px rgba(192,192,192,0.2);color:white;' :
+                     i === 2 ? 'background:linear-gradient(135deg,#CD7F32,#8B4513);box-shadow:0 4px 10px rgba(205,127,50,0.2);color:white;' :
+                     'background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.3);font-size:12px;')">
+                    @if (i === 0) { 🥇 }
+                    @else if (i === 1) { 🥈 }
+                    @else if (i === 2) { 🥉 }
+                    @else { {{ i + 1 }} }
                   </div>
-                  <!-- Progress Bar -->
-                  <div style="height:6px;background:#F3F4F6;border-radius:3px;overflow:hidden;">
-                    <div [style]="'height:100%;border-radius:3px;transition:width 1s cubic-bezier(0.4,0,0.2,1);animation:progressGrow 1s ease ' + (i*0.1) + 's both;width:' + getLeaderPercent(sub.farmers) + '%;' +
-                      (i === 0 ? 'background:linear-gradient(90deg,#FFD700,#DAA520);' :
-                       i === 1 ? 'background:linear-gradient(90deg,#C0C0C0,#A8A8A8);' :
-                       i === 2 ? 'background:linear-gradient(90deg,#CD7F32,#A0522D);' :
-                       'background:linear-gradient(90deg,#D047AE,#E068C4);')">
+                  <!-- Name & Progress -->
+                  <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                      <span [style]="'font-size:13px;font-weight:' + (i < 3 ? '800' : '600') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
+                        (i === 0 ? 'background:linear-gradient(135deg,#FFD700,#FFA500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;' :
+                         i === 1 ? 'color:#CDD2D8;' :
+                         i === 2 ? 'color:#D4944E;' :
+                         'color:rgba(255,255,255,0.65);')">{{ sub.name }}</span>
+                      <span [style]="'font-size:15px;font-weight:900;margin-left:12px;flex-shrink:0;' +
+                        (i === 0 ? 'color:#FFD700;' : i === 1 ? 'color:#BDC4CC;' : i === 2 ? 'color:#CD7F32;' : 'color:rgba(255,255,255,0.45);')">{{ sub.farmers }}</span>
+                    </div>
+                    <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;margin-bottom:8px;">
+                      <div [style]="'height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(0.4,0,0.2,1);width:' + getLeaderPercent(sub.farmers) + '%;' +
+                        (i === 0 ? 'background:linear-gradient(90deg,#C8960C,#FFD700,#FFC200);box-shadow:0 0 6px rgba(255,215,0,0.4);' :
+                         i === 1 ? 'background:linear-gradient(90deg,#8A9099,#C8CDD2);' :
+                         i === 2 ? 'background:linear-gradient(90deg,#8B4513,#CD7F32);' :
+                         'background:linear-gradient(90deg,#D047AE,#E068C4);')"></div>
+                    </div>
+                    <div style="display:flex;gap:5px;">
+                      <span style="padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700;background:rgba(194,56,154,0.18);color:#E88AC0;border:1px solid rgba(194,56,154,0.15);">{{ sub.gap }} GAP</span>
+                      <span style="padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700;background:rgba(14,165,233,0.14);color:#7DD3F8;border:1px solid rgba(14,165,233,0.12);">{{ sub.gep }} GEP</span>
+                      <span style="padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700;background:rgba(139,92,246,0.14);color:#C4B5FD;border:1px solid rgba(139,92,246,0.12);">{{ sub.gsp }} GSP</span>
                     </div>
                   </div>
-                  <!-- Stat Chips -->
-                  <div style="display:flex;gap:6px;margin-top:8px;">
-                    <span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:#FADDF2;color:#C2389A;">{{ sub.gap }} GAP</span>
-                    <span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:#E0F2FE;color:#0284C7;">{{ sub.gep }} GEP</span>
-                    <span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:#EDE9FE;color:#7C3AED;">{{ sub.gsp }} GSP</span>
+                  <!-- Arrow -->
+                  <div [style]="'flex-shrink:0;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;' +
+                    (i === 0 ? 'background:rgba(255,215,0,0.12);' : 'background:rgba(255,255,255,0.05);')">
+                    @if (i === 0) {
+                      <svg width="13" height="13" viewBox="0 0 20 20" fill="#FFD700"><path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                    } @else {
+                      <svg width="13" height="13" viewBox="0 0 20 20" fill="rgba(255,255,255,0.2)"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                    }
                   </div>
                 </div>
-
-                <!-- Trend Arrow -->
-                <div [style]="'flex-shrink:0;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;' +
-                  (i < 2 ? 'background:#DCFCE7;' : 'background:#F3F4F6;')">
-                  @if (i < 2) {
-                    <svg width="14" height="14" viewBox="0 0 20 20" fill="#16A34A"><path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
-                  } @else {
-                    <svg width="14" height="14" viewBox="0 0 20 20" fill="#9CA3AF"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
-                  }
-                </div>
-              </div>
-            }
+              }
+            </div>
           </div>
         </div>
       }
@@ -363,9 +383,11 @@ export type DateRange = 'week' | 'month' | 'quarter' | 'year' | 'all';
       @keyframes podiumRise { from { opacity:0; transform:translateY(40px) scale(0.9); } to { opacity:1; transform:translateY(0) scale(1); } }
       @keyframes rankSlideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
       @keyframes progressGrow { from { width:0 !important; } }
-      @keyframes crownBounce { 0%,100% { transform:translateX(-50%) translateY(0); } 50% { transform:translateX(-50%) translateY(-4px); } }
+      @keyframes crownBounce { 0%,100% { transform:translateX(-50%) translateY(0); } 50% { transform:translateX(-50%) translateY(-5px); } }
+      @keyframes shimmerGold { 0%,100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
+      @keyframes pulseRing { 0%,100% { transform:scale(1); opacity:0.4; } 50% { transform:scale(1.12); opacity:0.15; } }
       .chart-card:hover { transform:translateY(-4px) !important; box-shadow:0 16px 48px rgba(0,0,0,0.12) !important; }
-      .leader-row:hover { transform:translateX(4px) scale(1.01) !important; box-shadow:0 6px 20px rgba(0,0,0,0.08) !important; }
+      .leader-row:hover { transform:translateX(4px) scale(1.01) !important; box-shadow:0 8px 24px rgba(0,0,0,0.3) !important; }
     </style>
   `
 })
@@ -410,17 +432,24 @@ export class AnalyticsComponent implements OnInit {
     }
   }
 
-  /** Returns subordinates with recalculated metrics based on filtered tasks */
+  /** Returns subordinates with recalculated metrics based on filtered tasks.
+   *  Falls back to the API-level per-subordinate counts (gapCount / gepCount /
+   *  gspCount / farmersVisited) when task detail records are not available,
+   *  matching how the Dashboard KPI cards consume the same API values. */
   filteredSubs = computed(() => {
     const subs = this.summary()?.subordinates ?? [];
     const cutoff = this.getDateCutoff();
     return subs.map(s => {
       const tasks = s.tasks.filter(t => new Date(t.completedDate) >= cutoff);
       const training = s.trainingSessions.filter(t => new Date(t.date) >= cutoff);
-      const gap = tasks.filter(t => t.category === 'GAP').length;
-      const gep = tasks.filter(t => t.category === 'GEP').length;
-      const gsp = tasks.filter(t => t.category === 'GSP').length;
-      const farmers = tasks.reduce((sum, t) => sum + t.farmersVisited, 0);
+      // When task detail records exist, derive counts from them (supports date
+      // filtering). Otherwise fall back to the API-supplied summary counts
+      // (same source the Dashboard uses for its GAP / GEP / GSP KPI cards).
+      const hasTasks = tasks.length > 0;
+      const gap     = hasTasks ? tasks.filter(t => t.category === 'GAP').length : s.gapCount;
+      const gep     = hasTasks ? tasks.filter(t => t.category === 'GEP').length : s.gepCount;
+      const gsp     = hasTasks ? tasks.filter(t => t.category === 'GSP').length : s.gspCount;
+      const farmers = hasTasks ? tasks.reduce((sum, t) => sum + t.farmersVisited, 0) : s.farmersVisited;
       return { ...s, tasks, trainingSessions: training, farmersVisited: farmers, gapCount: gap, gepCount: gep, gspCount: gsp };
     });
   });
@@ -482,6 +511,11 @@ export class AnalyticsComponent implements OnInit {
     subs.sort((a, b) => b.farmersVisited - a.farmersVisited);
     return subs.map(s => ({ name: s.fullName, farmers: s.farmersVisited, gap: s.gapCount, gep: s.gepCount, gsp: s.gspCount }));
   });
+
+  leaderboardInitials(index: number): string {
+    const name = this.leaderboard()[index]?.name ?? '';
+    return name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
+  }
 
   getLeaderPercent(farmers: number): number {
     const max = this.leaderboard()[0]?.farmers || 1;

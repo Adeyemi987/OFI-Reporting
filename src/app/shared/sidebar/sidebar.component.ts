@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, computed, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -50,6 +50,7 @@ import { ROLE_LABELS, UserRole } from '../../core/models';
           <a
             [routerLink]="item.link"
             routerLinkActive="active-nav"
+            [routerLinkActiveOptions]="{ exact: item.exact }"
             class="nav-link"
             style="
               display: flex; align-items: center; gap: 12px;
@@ -84,7 +85,7 @@ import { ROLE_LABELS, UserRole } from '../../core/models';
             </div>
           }
         </div>
-        <button (click)="onLogout()" style="
+        <button (click)="showLogoutConfirm.set(true)" style="
           margin-top: 8px; width: 100%; padding: 9px;
           background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
           border-radius: 10px; color: #FCA5A5; font-size: 13px; font-weight: 600;
@@ -109,6 +110,47 @@ class="sidebar-logout-btn"
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       </style>
     </aside>
+
+    <!-- ── Sign Out Confirmation Modal ─────────────────────────── -->
+    @if (showLogoutConfirm()) {
+      <div
+        style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;"
+        (click)="showLogoutConfirm.set(false)"
+      >
+        <div
+          style="background:white;border-radius:20px;padding:32px;width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,0.3);animation:fadeIn 0.2s ease-out;"
+          (click)="$event.stopPropagation()"
+        >
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+            <div style="width:44px;height:44px;border-radius:12px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="#DC2626">
+                <path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+            </div>
+            <div>
+              <h3 style="margin:0;font-size:16px;font-weight:800;color:#1A1A1A;">Sign Out</h3>
+              <p style="margin:2px 0 0;font-size:13px;color:#6B7280;">{{ user()?.fullName }}</p>
+            </div>
+          </div>
+          <p style="margin:0 0 24px;font-size:14px;color:#374151;line-height:1.6;">Are you sure you want to sign out? You will need to log in again to access the dashboard.</p>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button
+              (click)="showLogoutConfirm.set(false)"
+              style="padding:10px 20px;border:1.5px solid #E5E7EB;border-radius:10px;background:white;color:#6B7280;font-size:14px;font-weight:600;cursor:pointer;"
+            >Cancel</button>
+            <button
+              (click)="onLogout()"
+              style="padding:10px 24px;border:none;border-radius:10px;background:#DC2626;color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;"
+            >
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              Yes, Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `
 })
 export class SidebarComponent {
@@ -128,6 +170,8 @@ export class SidebarComponent {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   });
 
+  showLogoutConfirm = signal(false);
+
   get sidebarStyle(): string {
     const w = this.expanded ? '240px' : '64px';
     const accent = this.themeService.accent();
@@ -145,10 +189,10 @@ export class SidebarComponent {
   }
 
   navItems = [
-    { label: 'Dashboard', link: '/dashboard', icon: '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/></svg>' },
-    { label: 'Reports', link: '/dashboard/reports', icon: '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>' },
-    { label: 'Analytics', link: '/dashboard/analytics', icon: '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>' },
-    { label: 'Settings', link: '/dashboard/settings', icon: '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>' },
+    { label: 'Dashboard', link: '/dashboard', exact: true, icon: '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/></svg>' },
+    { label: 'Reports', link: '/dashboard/reports', exact: false, icon: '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>' },
+    { label: 'Analytics', link: '/dashboard/analytics', exact: false, icon: '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>' },
+    { label: 'Settings', link: '/dashboard/settings', exact: false, icon: '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>' },
   ];
 
 
@@ -162,6 +206,7 @@ export class SidebarComponent {
   }
 
   onLogout(): void {
+    this.showLogoutConfirm.set(false);
     this.authService.logout();
   }
 }

@@ -1,26 +1,50 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { map, delay } from 'rxjs/operators';
+import { Observable, of, forkJoin } from 'rxjs';
+import { map, delay, catchError } from 'rxjs/operators';
 import { ApiService } from './api.service';
 import {
   DashboardSummary, SubordinateReport, ApprovalStatus,
   DownloadOptions, UserRole,
-  DashboardApiData, DashboardApiReport, ApiResult
+  DashboardApiData, DashboardApiReport, ApiResult,
+  ROLE_READY_MAPPED_STATUS, SubordinatesApiData
 } from '../models';
 
-const STATUS_MAP: Record<number, ApprovalStatus> = {
-  0: 'pending',
-  1: 'approved',
-  2: 'rejected',
-  3: 'flagged',
+// Handles numeric enum values (default .NET serialization)
+const STATUS_MAP_NUMERIC: Record<number, ApprovalStatus> = {
+  0: 'pending_fc',
+  1: 'pending_pc',
+  2: 'pending_gl',
+  3: 'pending_csh',
+  4: 'pending_sh',
+  5: 'pending_ch',
+  6: 'approved',
+  7: 'rejected',
+};
+
+// Handles string enum name values (when JsonStringEnumConverter is used)
+const STATUS_MAP_STRING: Record<string, ApprovalStatus> = {
+  'PendingFCApproval':  'pending_fc',
+  'PendingPCApproval':  'pending_pc',
+  'PendingGLApproval':  'pending_gl',
+  'PendingCSHApproval': 'pending_csh',
+  'PendingSHApproval':  'pending_sh',
+  'PendingCHApproval':  'pending_ch',
+  'Approved':           'approved',
+  'Rejected':           'rejected',
 };
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private readonly api = inject(ApiService);
 
-  private mapStatus(status: number): ApprovalStatus {
-    return STATUS_MAP[status] ?? 'pending';
+  private mapStatus(status: number | string): ApprovalStatus {
+    if (typeof status === 'string') {
+      // Try named enum first, then treat as numeric string
+      return STATUS_MAP_STRING[status]
+        ?? STATUS_MAP_NUMERIC[parseInt(status, 10)]
+        ?? 'pending_fc';
+    }
+    return STATUS_MAP_NUMERIC[status] ?? 'pending_fc';
   }
 
   private mapReport(r: DashboardApiReport): SubordinateReport {
@@ -40,31 +64,67 @@ export class DashboardService {
     };
   }
 
-  private mapToDashboardSummary(data: DashboardApiData): DashboardSummary {
+  private mapToDashboardSummary(
+    data: DashboardApiData,
+    role: UserRole,
+    totalSubordinates: number
+  ): DashboardSummary {
     const subordinates = data.subordinateReports.map(r => this.mapReport(r));
+    const reportSubmittedCount = (data.pendingReportCount ?? 0) + (data.approvedReportCount ?? 0);
+    const allSubmitted = totalSubordinates > 0 && reportSubmittedCount >= totalSubordinates;
+    const readyStatus = ROLE_READY_MAPPED_STATUS[role];
+    const canApprove =
+      allSubmitted &&
+      readyStatus !== undefined &&
+      subordinates.length > 0 &&
+      subordinates.every(s => s.status === readyStatus);
+    const approvedCount = subordinates.filter(s => s.status === 'approved').length;
+    const pendingApprovals = subordinates.filter(s => s.status !== 'approved' && s.status !== 'rejected').length;
     return {
-      totalSubordinates: data.subordinateReports.length,
+      totalSubordinates,
+      reportSubmittedCount,
+      allSubmitted,
       totalFarmersVisited: data.totalFarmersVisited,
       totalGAP: data.gapTaskCount,
       totalGEP: data.gepTaskCount,
       totalGSP: data.gspTaskCount,
-      pendingApprovals: data.pendingReportCount,
-      approvedCount: data.approvedReportCount,
-      canApprove: data.pendingReportCount === 0 && data.subordinateReports.length > 0,
+      pendingApprovals,
+      approvedCount,
+      canApprove,
+      isWeeklyReportSent: data.isWeeklyReportSent ?? false,
       lastUpdated: new Date().toISOString(),
       subordinates,
     };
   }
 
-  getDashboard(_role: UserRole): Observable<DashboardSummary> {
-    return this.api.get<ApiResult<DashboardApiData>>('/api/Dashboard').pipe(
-      map(response => this.mapToDashboardSummary(response.data))
+  getDashboard(role: UserRole): Observable<DashboardSummary> {
+    return forkJoin([
+      this.api.get<ApiResult<DashboardApiData>>('/api/Dashboard'),
+      this.api.get<ApiResult<SubordinatesApiData>>(
+        '/api/Users/subordinates?PageNumber=3230&PageSize=3230'
+      ).pipe(catchError(() => of({ success: true, message: '', data: { totalCount: 0, items: [] }, errors: null }))),
+    ]).pipe(
+      map(([dashRes, subsRes]) =>
+        this.mapToDashboardSummary(dashRes.data, role, subsRes.data?.totalCount ?? 0)
+      )
     );
   }
 
   approve(role: UserRole, approverName: string): Observable<{ success: boolean; message: string }> {
     // TODO: Replace with real approve endpoint
     return of({ success: true, message: 'Report approved and promoted to next level.' }).pipe(delay(1200));
+  }
+
+  approveOne(reportId: string, approverName: string): Observable<{ success: boolean; message: string }> {
+    return this.api.post<ApiResult<unknown>>(`/api/Reports/${reportId}/approve`, { approverName }).pipe(
+      map(r => ({ success: r.success, message: r.message ?? 'Report approved successfully.' }))
+    );
+  }
+
+  rejectOne(reportId: string, reason: string, approverName: string): Observable<{ success: boolean; message: string }> {
+    return this.api.post<ApiResult<unknown>>(`/api/Dashboard/reject/${reportId}`, { reason, approverName }).pipe(
+      map(r => ({ success: r.success, message: r.message ?? 'Rejected.' }))
+    );
   }
 
   downloadReport(options: DownloadOptions, data: SubordinateReport[]): void {

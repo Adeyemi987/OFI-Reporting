@@ -66,7 +66,12 @@ export class AuthService {
         this._authState.set({ user: res.user, token: res.token, isAuthenticated: true });
       }),
       catchError(err => {
-        const message = err?.error?.message ?? err?.message ?? 'Invalid credentials.';
+        let message: string;
+        if (err?.status === 0) {
+          message = 'Cannot connect to the server. Please check that the server is running.';
+        } else {
+          message = err?.error?.message ?? err?.message ?? 'Invalid credentials.';
+        }
         return throwError(() => new Error(message));
       })
     );

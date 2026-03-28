@@ -1,13 +1,13 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div style="
       min-height: 100vh;
@@ -189,6 +189,11 @@ import { AuthService } from '../../../core/services/auth.service';
             }
           </button>
         </form>
+
+        <p style="text-align:center;margin-top:24px;font-size:13px;color:#6B7280;">
+          Don't have an account?
+          <a routerLink="/auth/register" style="color:#821E75;font-weight:700;text-decoration:none;margin-left:4px;">Create Account</a>
+        </p>
 
       </div>
 

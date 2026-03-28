@@ -4,10 +4,14 @@ import { Pipe, PipeTransform } from '@angular/core';
 export class StatusLabelPipe implements PipeTransform {
   transform(status: string): string {
     const labels: Record<string, string> = {
-      pending: 'Pending',
-      approved: 'Approved',
-      rejected: 'Rejected',
-      flagged: 'Flagged'
+      pending_fc:  'Pending',
+      pending_pc:  'Pending',
+      pending_gl:  'Pending',
+      pending_csh: 'Pending',
+      pending_sh:  'Pending',
+      pending_ch:  'Pending',
+      approved:    'Approved',
+      rejected:    'Rejected',
     };
     return labels[status] ?? status;
   }

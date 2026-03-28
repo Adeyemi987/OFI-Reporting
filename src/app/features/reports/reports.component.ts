@@ -4,12 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE } from '../../core/models';
-import { StatusLabelPipe } from '../../shared/pipes/pipes';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule, StatusLabelPipe],
+  imports: [CommonModule, FormsModule],
   template: `
     <div style="
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -100,8 +99,7 @@ import { StatusLabelPipe } from '../../shared/pipes/pipes';
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#228A22;text-transform:uppercase;letter-spacing:0.5px;">GAP</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#0EA5E9;text-transform:uppercase;letter-spacing:0.5px;">GEP</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#8B5CF6;text-transform:uppercase;letter-spacing:0.5px;">GSP</th>
-                  <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Status</th>
-                  <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Approval Date</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;min-width:200px;">Status / Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -161,22 +159,86 @@ import { StatusLabelPipe } from '../../shared/pipes/pipes';
                         background:#EDE9FE;padding:3px 10px;border-radius:8px;
                       ">{{ sub.gspCount }}</span>
                     </td>
-                    <td style="padding:14px 16px;text-align:center;">
-                      <span [style]="statusBadgeStyle(sub.status)">
-                        @if (sub.status === 'approved') {
-                          <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                        } @else {
-                          <span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;"></span>
-                        }
-                        {{ sub.status | statusLabel }}
-                      </span>
-                    </td>
-                    <td style="padding:14px 16px;text-align:center;font-size:12px;color:#6B7280;">
-                      @if (sub.approvalDate) {
-                        {{ sub.approvalDate | date:'MMM d, y' }}<br/>
-                        <span style="color:#9CA3AF;font-size:11px;">by {{ sub.approvedBy }}</span>
+                    <!-- Multipurpose Status / Action cell -->
+                    <td style="padding:10px 16px;text-align:center;" (click)="$event.stopPropagation()">
+                      @if (sub.status === 'approved') {
+                        <span style="
+                          display:inline-flex;align-items:center;gap:5px;
+                          padding:7px 14px;background:#DCFCE7;color:#16A34A;
+                          border-radius:20px;font-size:11px;font-weight:800;
+                          white-space:nowrap;border:1.5px solid #BBF7D0;
+                          pointer-events:none;
+                        ">
+                          <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                          Approved
+                          <svg width="9" height="9" viewBox="0 0 20 20" fill="currentColor" style="opacity:0.45;"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                        </span>
+                      } @else if (sub.status === 'rejected') {
+                        <span style="
+                          display:inline-flex;align-items:center;gap:5px;
+                          padding:7px 14px;background:#FEE2E2;color:#DC2626;
+                          border-radius:20px;font-size:11px;font-weight:800;
+                          white-space:nowrap;border:1.5px solid #FECACA;
+                          pointer-events:none;
+                        ">
+                          <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                          Rejected
+                          <svg width="9" height="9" viewBox="0 0 20 20" fill="currentColor" style="opacity:0.45;"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                        </span>
+                      } @else if (actioningSubId() === sub.userId) {
+                        <span style="
+                          display:inline-flex;align-items:center;gap:6px;
+                          padding:7px 14px;background:#FEF9C3;color:#B45309;
+                          border-radius:20px;font-size:11px;font-weight:700;
+                          white-space:nowrap;border:1.5px solid #FDE68A;
+                        ">
+                          <svg style="animation:spin 1s linear infinite;" width="11" height="11" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="rgba(180,83,9,0.25)" stroke-width="3"/>
+                            <path d="M12 2a10 10 0 0110 10" stroke="#B45309" stroke-width="3" stroke-linecap="round"/>
+                          </svg>
+                          Processing...
+                        </span>
                       } @else {
-                        <span style="color:#D1D5DB;">—</span>
+                        <!-- Pending: two-part widget — status badge above, action dropdown below -->
+                        <div style="display:inline-flex;flex-direction:column;align-items:center;gap:5px;">
+                          <!-- Status indicator -->
+                          <span style="
+                            display:inline-flex;align-items:center;gap:4px;
+                            padding:3px 10px;
+                            background:#FEF9C3;color:#B45309;
+                            border-radius:20px;font-size:10px;font-weight:800;
+                            border:1.5px solid #FDE68A;white-space:nowrap;
+                          ">
+                            <span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;"></span>
+                            Pending
+                          </span>
+                          <!-- Action prompt -->
+                          <div style="position:relative;display:inline-block;">
+                            <select
+                              class="status-action-select"
+                              (change)="onActionSelect($event, sub)"
+                              style="
+                                appearance:none;-webkit-appearance:none;
+                                padding:5px 26px 5px 10px;
+                                border-radius:8px;
+                                border:1.5px dashed #D047AE;
+                                background:white;
+                                color:#8B2D73;
+                                font-size:11px;font-weight:700;
+                                cursor:pointer;outline:none;
+                                min-width:130px;
+                                transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;
+                              "
+                            >
+                              <option value="" disabled selected>👆 Choose action…</option>
+                              <option value="approve">✓ Approve</option>
+                              <option value="reject">✕ Reject</option>
+                            </select>
+                            <svg style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;" width="10" height="10" viewBox="0 0 20 20" fill="#D047AE">
+                              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                          </div>
+                        </div>
                       }
                     </td>
                   </tr>
@@ -184,7 +246,7 @@ import { StatusLabelPipe } from '../../shared/pipes/pipes';
                   <!-- Expanded detail row -->
                   @if (sub.isExpanded) {
                     <tr style="animation: expandRow 0.3s ease-out;">
-                      <td colspan="8" style="background:#FDF2FB;border-top:1px solid #F0B8E0;border-bottom:2px solid #E068C4;">
+                      <td colspan="7" style="background:#FDF2FB;border-top:1px solid #F0B8E0;border-bottom:2px solid #E068C4;">
                         <div style="padding:20px 24px;">
 
                           <!-- Tabs + Category Filter -->
@@ -297,6 +359,109 @@ import { StatusLabelPipe } from '../../shared/pipes/pipes';
           }
         </div>
       }
+
+      <!-- ── Confirm Approve Modal ───────────────────────────────── -->
+      @if (approveModal()) {
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;" (click)="closeApproveModal()">
+          <div style="background:white;border-radius:20px;padding:32px;width:100%;max-width:440px;box-shadow:0 24px 80px rgba(0,0,0,0.3);" (click)="$event.stopPropagation()">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+              <div style="width:44px;height:44px;border-radius:12px;background:#DCFCE7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="#16A34A"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              </div>
+              <div>
+                <h3 style="margin:0;font-size:16px;font-weight:800;color:#1A1A1A;">Confirm Approval</h3>
+                <p style="margin:2px 0 0;font-size:13px;color:#6B7280;">{{ approveModal()?.subName }}</p>
+              </div>
+            </div>
+            <p style="margin:0 0 24px;font-size:14px;color:#374151;line-height:1.6;">Are you sure you want to approve this report? This action cannot be undone.</p>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+              <button (click)="closeApproveModal()" style="padding:10px 20px;border:1.5px solid #E5E7EB;border-radius:10px;background:white;color:#6B7280;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
+              <button
+                (click)="confirmApprove()"
+                [disabled]="actioningSubId() !== null"
+                style="padding:10px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#16A34A,#22C55E);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;"
+                [style.opacity]="actioningSubId() !== null ? '0.6' : '1'"
+              >
+                @if (actioningSubId() !== null) {
+                  <svg style="animation:spin 1s linear infinite;" width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.4)" stroke-width="3"/><path d="M12 2a10 10 0 0110 10" stroke="white" stroke-width="3" stroke-linecap="round"/></svg>
+                  Approving...
+                } @else {
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  Yes, Approve
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── Reject Modal ──────────────────────────────────────────── -->
+      @if (rejectModal()) {
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;" (click)="closeRejectModal()">
+          <div style="background:white;border-radius:20px;padding:32px;width:100%;max-width:460px;box-shadow:0 24px 80px rgba(0,0,0,0.3);" (click)="$event.stopPropagation()">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+              <div style="width:40px;height:40px;border-radius:12px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="#DC2626"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+              </div>
+              <div>
+                <h3 style="margin:0;font-size:16px;font-weight:800;color:#1A1A1A;">Reject Report</h3>
+                <p style="margin:2px 0 0;font-size:13px;color:#6B7280;">{{ rejectModal()?.subName }}</p>
+              </div>
+            </div>
+            <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:8px;">Reason for rejection <span style="color:#DC2626;">*</span></label>
+            <textarea
+              [value]="rejectReason()"
+              (input)="rejectReason.set($any($event.target).value)"
+              placeholder="Provide a clear reason so the subordinate can address the issues..."
+              rows="4"
+              style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:13px;font-family:inherit;resize:vertical;outline:none;transition:border-color 0.2s;"
+              class="reject-textarea"
+            ></textarea>
+            <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+              <button (click)="closeRejectModal()" style="padding:10px 20px;border:1.5px solid #E5E7EB;border-radius:10px;background:white;color:#6B7280;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
+              <button
+                (click)="confirmReject()"
+                [disabled]="!rejectReason().trim() || actioningSubId() !== null"
+                style="padding:10px 20px;border:none;border-radius:10px;background:#DC2626;color:white;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;"
+                [style.opacity]="!rejectReason().trim() || actioningSubId() !== null ? '0.5' : '1'"
+              >
+                @if (actioningSubId() !== null) {
+                  Rejecting...
+                } @else {
+                  Confirm Reject
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── Toast Notification ──────────────────────────────────── -->
+      @if (toast()) {
+        <div style="
+          position:fixed;bottom:28px;right:28px;z-index:2000;
+          display:flex;align-items:center;gap:12px;
+          padding:14px 20px;border-radius:14px;
+          box-shadow:0 8px 32px rgba(0,0,0,0.18);
+          animation:slideInToast 0.3s cubic-bezier(0.22,1,0.36,1);
+          min-width:280px;max-width:400px;
+        " [style.background]="toast()!.success ? '#F0FDF4' : '#FEF2F2'" [style.border]="'1.5px solid ' + (toast()!.success ? '#86EFAC' : '#FECACA')">
+          <div [style]="'width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (toast()!.success ? '#DCFCE7' : '#FEE2E2')">
+            @if (toast()!.success) {
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="#16A34A"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            } @else {
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="#DC2626"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+            }
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;" [style.color]="toast()!.success ? '#15803D' : '#B91C1C'">{{ toast()!.success ? 'Success' : 'Failed' }}</div>
+            <div style="font-size:12px;margin-top:1px;color:#6B7280;">{{ toast()!.message }}</div>
+          </div>
+          <button (click)="toast.set(null)" style="background:none;border:none;cursor:pointer;padding:4px;color:#9CA3AF;flex-shrink:0;">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+      }
     </div>
 
     <style>
@@ -306,6 +471,11 @@ import { StatusLabelPipe } from '../../shared/pipes/pipes';
       .table-row-hover:hover td { background:#FDF2FB !important; }
       .rpt-search:focus { border-color: #E068C4 !important; background: white !important; }
       .rpt-dl-btn:hover { border-color: #E068C4 !important; color: #D047AE !important; background: #FDF2FB !important; }
+      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes slideInToast { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+      .status-action-select:hover { border-color:#D047AE !important; background:#FDF2FB !important; box-shadow:0 0 0 3px rgba(208,71,174,0.12); }
+      .status-action-select:focus { border-color:#8B2D73 !important; background:#FDF2FB !important; box-shadow:0 0 0 3px rgba(139,45,115,0.15); }
+      .reject-textarea:focus { border-color: #E068C4 !important; }
     </style>
   `
 })
@@ -315,6 +485,11 @@ export class ReportsComponent implements OnInit {
 
   loading = signal(true);
   summary = signal<DashboardSummary | null>(null);
+  actioningSubId = signal<string | null>(null);
+  approveModal = signal<{ subId: string; subName: string } | null>(null);
+  rejectModal = signal<{ subId: string; subName: string } | null>(null);
+  rejectReason = signal('');
+  toast = signal<{ success: boolean; message: string } | null>(null);
 
   searchQuery = signal('');
   filterStatus = signal('');
@@ -408,22 +583,28 @@ export class ReportsComponent implements OnInit {
 
   rowStyle(sub: SubordinateReport, i: number): string {
     const base = sub.isExpanded ? '#FDF2FB' : (i % 2 === 0 ? 'white' : '#FAFAFA');
+    const isPending = sub.status !== 'approved' && sub.status !== 'rejected';
     return `
       background:${base};cursor:pointer;
       border-bottom:1px solid #F3F4F6;
       transition:background 0.15s;
-      ${sub.status === 'pending' ? 'border-left:3px solid #F59E0B;' : ''}
+      ${isPending ? 'border-left:3px solid #F59E0B;' : ''}
     `;
   }
 
   statusBadgeStyle(status: string): string {
+    const pending = 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEF9C3;color:#B45309;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;';
     const styles: Record<string, string> = {
-      approved: 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#DCFCE7;color:#16A34A;border-radius:20px;font-size:11px;font-weight:700;',
-      pending: 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEF9C3;color:#B45309;border-radius:20px;font-size:11px;font-weight:700;',
-      rejected: 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEE2E2;color:#DC2626;border-radius:20px;font-size:11px;font-weight:700;',
-      flagged: 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEF2F2;color:#DC2626;border-radius:20px;font-size:11px;font-weight:700;',
+      approved:    'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#DCFCE7;color:#16A34A;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;',
+      rejected:    'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEE2E2;color:#DC2626;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;',
+      pending_fc:  pending,
+      pending_pc:  pending,
+      pending_gl:  pending,
+      pending_csh: pending,
+      pending_sh:  pending,
+      pending_ch:  pending,
     };
-    return styles[status] ?? styles['pending'];
+    return styles[status] ?? pending;
   }
 
   categoryBadge(cat: string): string {
@@ -444,5 +625,94 @@ export class ReportsComponent implements OnInit {
       color:${active ? 'white' : '#6B7280'};
       transition:all 0.2s;
     `;
+  }
+
+  onActionSelect(event: Event, sub: SubordinateReport): void {
+    const value = (event.target as HTMLSelectElement).value;
+    (event.target as HTMLSelectElement).value = '';
+    if (value === 'approve') {
+      this.approveModal.set({ subId: sub.userId, subName: sub.fullName });
+    } else if (value === 'reject') {
+      this.openRejectModal(sub);
+    }
+  }
+
+  closeApproveModal(): void {
+    if (this.actioningSubId() !== null) return;
+    this.approveModal.set(null);
+  }
+
+  confirmApprove(): void {
+    const modal = this.approveModal();
+    if (!modal) return;
+    this.actioningSubId.set(modal.subId);
+    const approverName = this.authService.currentUser()?.fullName ?? 'Unknown';
+    this.dashboardService.approveOne(modal.subId, approverName).subscribe({
+      next: (res) => {
+        this.summary.update(s => {
+          if (!s) return s;
+          return {
+            ...s,
+            subordinates: s.subordinates.map(r =>
+              r.userId === modal.subId ? { ...r, status: 'approved' as const, approvedBy: approverName, approvalDate: new Date().toISOString() } : r
+            ),
+            approvedCount: s.approvedCount + 1,
+            pendingApprovals: Math.max(0, s.pendingApprovals - 1),
+          };
+        });
+        this.actioningSubId.set(null);
+        this.approveModal.set(null);
+        this.showToast(true, res.message || 'Report approved successfully.');
+      },
+      error: (err) => {
+        this.actioningSubId.set(null);
+        this.approveModal.set(null);
+        this.showToast(false, err?.error?.message || 'Approval failed. Please try again.');
+      }
+    });
+  }
+
+  openRejectModal(sub: SubordinateReport): void {
+    this.rejectReason.set('');
+    this.rejectModal.set({ subId: sub.userId, subName: sub.fullName });
+  }
+
+  closeRejectModal(): void {
+    this.rejectModal.set(null);
+    this.rejectReason.set('');
+  }
+
+  confirmReject(): void {
+    const modal = this.rejectModal();
+    const reason = this.rejectReason().trim();
+    if (!modal || !reason) return;
+    this.actioningSubId.set(modal.subId);
+    const approverName = this.authService.currentUser()?.fullName ?? 'Unknown';
+    this.dashboardService.rejectOne(modal.subId, reason, approverName).subscribe({
+      next: (res) => {
+        this.summary.update(s => {
+          if (!s) return s;
+          return {
+            ...s,
+            subordinates: s.subordinates.map(r =>
+              r.userId === modal.subId ? { ...r, status: 'rejected' as const } : r
+            ),
+            pendingApprovals: Math.max(0, s.pendingApprovals - 1),
+          };
+        });
+        this.actioningSubId.set(null);
+        this.closeRejectModal();
+        this.showToast(true, res.message || 'Report rejected.');
+      },
+      error: (err) => {
+        this.actioningSubId.set(null);
+        this.showToast(false, err?.error?.message || 'Rejection failed. Please try again.');
+      }
+    });
+  }
+
+  showToast(success: boolean, message: string): void {
+    this.toast.set({ success, message });
+    setTimeout(() => this.toast.set(null), 5000);
   }
 }

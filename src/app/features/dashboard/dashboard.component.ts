@@ -1,11 +1,12 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import {
   DashboardSummary, SubordinateReport, UserRole,
-  ROLE_LABELS, ROLE_SUBORDINATE, DownloadOptions
+  ROLE_LABELS, ROLE_SUBORDINATE, ROLE_HIERARCHY, DownloadOptions
 } from '../../core/models';
 import { RouterLink } from '@angular/router';
 import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
@@ -51,38 +52,34 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
             </p>
           </div>
 
-          <!-- Approve button -->
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            @if (!summary()?.canApprove) {
-              <div style="
-                display:flex;align-items:center;gap:6px;
-                padding:10px 16px; background:rgba(239,68,68,0.15);
-                border:1px solid rgba(239,68,68,0.4); border-radius:10px;
-              ">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="#FCA5A5"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                <span style="font-size:12px;color:#FCA5A5;font-weight:600;">{{ summary()?.pendingApprovals }} pending approval{{ (summary()?.pendingApprovals ?? 0) > 1 ? 's' : '' }}</span>
-              </div>
-            }
-            <button
-              [disabled]="!summary()?.canApprove || approving()"
-              (click)="onApprove()"
-              [style]="approveButtonStyle()"
-            >
-              @if (approving()) {
-                <svg style="animation:spin 1s linear infinite;" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
-                  <path d="M12 2a10 10 0 0110 10" stroke="white" stroke-width="3" stroke-linecap="round"/>
-                </svg>
-                Approving...
-              } @else if (approved()) {
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Approved!
-              } @else {
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Approve All & Promote
-              }
-            </button>
-          </div>
+          <!-- View Detailed Reports -->
+          <a routerLink="reports" style="
+            display:flex;align-items:center;gap:12px;
+            padding:14px 26px;
+            background:white;
+            border:2px solid rgba(255,255,255,0.9);
+            border-radius:14px;text-decoration:none;color:#8B2D73;
+            cursor:pointer;transition:all 0.2s;flex-shrink:0;
+            box-shadow:0 4px 20px rgba(0,0,0,0.18);
+          " class="cta-reports">
+            <div style="
+              width:36px;height:36px;border-radius:10px;flex-shrink:0;
+              background:linear-gradient(135deg,#8B2D73,#D047AE);
+              display:flex;align-items:center;justify-content:center;
+              box-shadow:0 3px 10px rgba(139,45,115,0.4);
+            ">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="white">
+                <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z" clip-rule="evenodd"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-size:15px;font-weight:900;line-height:1.2;color:#7B1F63;letter-spacing:-0.2px;">View Detailed Reports</div>
+              <div style="font-size:12px;font-weight:600;margin-top:3px;color:#C2389A;">See full task &amp; training breakdown for each {{ subordinateLabel() }}</div>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="#D047AE" style="margin-left:6px;flex-shrink:0;">
+              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+            </svg>
+          </a>
         </div>
       </div>
 
@@ -105,7 +102,7 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
               <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
                 <div [style]="'width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:' + card.iconBg" [innerHTML]="card.icon"></div>
                 @if (card.badge) {
-                  <span [style]="badgeStyle(card.badge)">{{ card.badge }}</span>
+                  <span [style]="badgeStyle(card.badge, card.badgeSuccess)">{{ card.badge }}</span>
                 }
               </div>
               <div style="font-size:26px;font-weight:900;letter-spacing:-1px;" [style.color]="card.valueColor">{{ card.value | numberShort }}</div>
@@ -114,36 +111,6 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
           }
         </div>
       }
-
-      <!-- ── View Detailed Reports CTA ─────────────────────────────── -->
-      <a routerLink="reports" style="
-        display:flex;align-items:center;justify-content:space-between;
-        padding:16px 24px;margin-bottom:20px;
-        background:linear-gradient(135deg,#FDF2FB,#FADDF2);
-        border:1.5px solid #F0B8E0;border-radius:16px;
-        cursor:pointer;text-decoration:none;
-        transition:all 0.25s;
-      " class="cta-reports">
-        <div style="display:flex;align-items:center;gap:14px;">
-          <div style="
-            width:42px;height:42px;border-radius:12px;
-            background:linear-gradient(135deg,#D047AE,#E068C4);
-            display:flex;align-items:center;justify-content:center;
-            box-shadow:0 4px 12px rgba(208,71,174,0.3);
-          ">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="white">
-              <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z" clip-rule="evenodd"/>
-            </svg>
-          </div>
-          <div>
-            <div style="font-size:14px;font-weight:800;color:#8B2D73;">View Detailed Reports</div>
-            <div style="font-size:12px;color:#C2389A;margin-top:2px;">Click to view task &amp; training details per {{ subordinateLabel() }}</div>
-          </div>
-        </div>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="#D047AE">
-          <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-        </svg>
-      </a>
 
       <!-- ── Summary Table ─────────────────────────────────────────── -->
       <div style="
@@ -159,10 +126,6 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
             <h2 style="margin:0;font-size:16px;font-weight:800;color:#1A1A1A;">{{ subordinateLabel() }} Summary</h2>
             <p style="margin:4px 0 0;font-size:12px;color:#9CA3AF;">{{ filteredSubordinates().length }} records</p>
           </div>
-          <div style="
-            padding:6px 12px; background:#DCFCE7; border:1px solid #BBF7D0;
-            border-radius:20px; font-size:12px; font-weight:700; color:#16A34A;
-          ">{{ summary()?.approvedCount ?? 0 }}/{{ summary()?.totalSubordinates ?? 0 }} Approved</div>
         </div>
 
         <!-- Table -->
@@ -175,8 +138,7 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
                 <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#228A22;text-transform:uppercase;letter-spacing:0.5px;">GAP</th>
                 <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#0EA5E9;text-transform:uppercase;letter-spacing:0.5px;">GEP</th>
                 <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#8B5CF6;text-transform:uppercase;letter-spacing:0.5px;">GSP</th>
-                <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Status</th>
-                <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Approval Date</th>
+                <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;min-width:170px;">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -240,14 +202,6 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
                         {{ sub.status | statusLabel }}
                       </span>
                     </td>
-                    <td style="padding:14px 16px;text-align:center;font-size:12px;color:#6B7280;">
-                      @if (sub.approvalDate) {
-                        {{ sub.approvalDate | date:'MMM d, y' }}<br/>
-                        <span style="color:#9CA3AF;font-size:11px;">by {{ sub.approvedBy }}</span>
-                      } @else {
-                        <span style="color:#D1D5DB;">—</span>
-                      }
-                    </td>
                   </tr>
                 }
               }
@@ -291,6 +245,68 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
           }
         </div>
       </div>
+      <!-- ── Promote Confirmation Modal ──────────────────────────────── -->
+      @if (promoteModal()) {
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;" (click)="closePromoteModal()">
+          <div style="background:white;border-radius:20px;padding:32px;width:100%;max-width:460px;box-shadow:0 24px 80px rgba(0,0,0,0.3);" (click)="$event.stopPropagation()">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+              <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#FADDF2,#FDF2FB);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="#D047AE"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11h2v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+              </div>
+              <div>
+                <h3 style="margin:0;font-size:16px;font-weight:800;color:#1A1A1A;">Send to {{ nextRoleLabel() }}</h3>
+                <p style="margin:2px 0 0;font-size:13px;color:#6B7280;">Promote all approved reports</p>
+              </div>
+            </div>
+            <p style="margin:0 0 8px;font-size:14px;color:#374151;line-height:1.6;">You are about to send <strong>{{ summary()?.approvedCount }}</strong> approved report(s) up to the <strong>{{ nextRoleLabel() }}</strong> level.</p>
+            <p style="margin:0 0 24px;font-size:13px;color:#9CA3AF;line-height:1.6;">This action cannot be undone. Make sure all records are reviewed before proceeding.</p>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+              <button (click)="closePromoteModal()" style="padding:10px 20px;border:1.5px solid #E5E7EB;border-radius:10px;background:white;color:#6B7280;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
+              <button
+                (click)="confirmPromote()"
+                [disabled]="approving()"
+                style="padding:10px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#8B2D73,#D047AE);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;"
+                [style.opacity]="approving() ? '0.65' : '1'"
+              >
+                @if (approving()) {
+                  <svg style="animation:spin 1s linear infinite;" width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.4)" stroke-width="3"/><path d="M12 2a10 10 0 0110 10" stroke="white" stroke-width="3" stroke-linecap="round"/></svg>
+                  Sending...
+                } @else {
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11h2v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+                  Yes, Send to {{ nextRoleLabel() }}
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── Toast Notification ────────────────────────────────────── -->
+      @if (toast()) {
+        <div style="
+          position:fixed;bottom:28px;right:28px;z-index:2000;
+          display:flex;align-items:center;gap:12px;
+          padding:14px 20px;border-radius:14px;
+          box-shadow:0 8px 32px rgba(0,0,0,0.18);
+          animation:slideInToast 0.3s cubic-bezier(0.22,1,0.36,1);
+          min-width:280px;max-width:400px;
+        " [style.background]="toast()!.success ? '#F0FDF4' : '#FEF2F2'" [style.border]="'1.5px solid ' + (toast()!.success ? '#86EFAC' : '#FECACA')">
+          <div [style]="'width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (toast()!.success ? '#DCFCE7' : '#FEE2E2')">
+            @if (toast()!.success) {
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="#16A34A"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            } @else {
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="#DC2626"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+            }
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;" [style.color]="toast()!.success ? '#15803D' : '#B91C1C'">{{ toast()!.success ? 'Success' : 'Failed' }}</div>
+            <div style="font-size:12px;margin-top:1px;color:#6B7280;">{{ toast()!.message }}</div>
+          </div>
+          <button (click)="toast.set(null)" style="background:none;border:none;cursor:pointer;padding:4px;color:#9CA3AF;flex-shrink:0;">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+      }
     </div>
 
     <style>
@@ -298,10 +314,11 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
       @keyframes expandRow { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
       @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes slideInToast { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
       .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.12) !important; }
       .dash-search:focus { border-color: #E068C4 !important; background: white !important; }
       .dash-dl-btn:hover { border-color: #E068C4 !important; color: #D047AE !important; background: #FDF2FB !important; }
-      .cta-reports:hover { box-shadow: 0 6px 24px rgba(208,71,174,0.2) !important; border-color: #E068C4 !important; transform: translateY(-1px); }
+      .cta-reports:hover { background: #FDF2FB !important; box-shadow: 0 8px 32px rgba(0,0,0,0.22) !important; transform: translateY(-2px) scale(1.01); }
       @media (max-width: 768px) {
         .dash-responsive-header { flex-direction: column !important; text-align: center; }
         .dash-responsive-header > div:last-child { justify-content: center !important; width: 100%; }
@@ -312,6 +329,9 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
 export class DashboardComponent implements OnInit {
   private authService = inject(AuthService);
   private dashboardService = inject(DashboardService);
+  private sanitizer = inject(DomSanitizer);
+
+  private svg(raw: string): SafeHtml { return this.sanitizer.bypassSecurityTrustHtml(raw); }
 
   summary = signal<DashboardSummary | null>(null);
   loading = signal(true);
@@ -324,6 +344,9 @@ export class DashboardComponent implements OnInit {
   dateFrom = signal('');
   dateTo = signal('');
 
+  promoteModal = signal(false);
+  toast = signal<{ success: boolean; message: string } | null>(null);
+
   role = this.authService.currentRole;
   roleLabel = computed(() => {
     const r = this.role();
@@ -332,6 +355,13 @@ export class DashboardComponent implements OnInit {
   subordinateLabel = computed(() => {
     const r = this.role();
     return r ? ROLE_SUBORDINATE[r] : '';
+  });
+  nextRoleLabel = computed(() => {
+    const r = this.role();
+    if (!r) return '';
+    const idx = ROLE_HIERARCHY.indexOf(r);
+    const next = ROLE_HIERARCHY[idx + 1] as UserRole | undefined;
+    return next ? ROLE_LABELS[next] : '';
   });
   formattedDate = computed(() => {
     const d = this.summary()?.lastUpdated;
@@ -345,41 +375,54 @@ export class DashboardComponent implements OnInit {
     if (!s) return [];
     return [
       {
+        // Total Field Officers — user-group (team of officers)
         label: 'Total ' + this.subordinateLabel(), value: s.totalSubordinates,
         valueColor: '#1A1A1A', iconBg: '#FDF2FB',
-        icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="#D047AE"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>',
-        badge: null
+        icon: this.svg('<svg width="20" height="20" viewBox="0 0 20 20" fill="#D047AE"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>'),
+
+        badge: s.allSubmitted ? '✓ All Submitted' : `${s.reportSubmittedCount}/${s.totalSubordinates} Submitted`,
+        badgeSuccess: s.allSubmitted,
       },
       {
+        // Farmers Visited — single user (each farmer counted individually)
         label: 'Farmers Visited', value: s.totalFarmersVisited,
         valueColor: '#D047AE', iconBg: '#FADDF2',
-        icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="#E068C4"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>',
+        icon: this.svg('<svg width="20" height="20" viewBox="0 0 20 20" fill="#E068C4"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>'),
+
         badge: null
       },
       {
+        // GAP — badge-check (certified / verified good agricultural practices)
         label: 'GAP Tasks', value: s.totalGAP,
-        valueColor: '#C2389A', iconBg: '#FADDF2',
-        icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="#22C55E"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>',
+        valueColor: '#15803D', iconBg: '#DCFCE7',
+        icon: this.svg('<svg width="20" height="20" viewBox="0 0 20 20" fill="#16A34A"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>'),
+
         badge: 'GAP'
       },
       {
+        // GEP — globe (environmental = planet care)
         label: 'GEP Tasks', value: s.totalGEP,
         valueColor: '#0284C7', iconBg: '#E0F2FE',
-        icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="#38BDF8"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>',
+        icon: this.svg('<svg width="20" height="20" viewBox="0 0 20 20" fill="#0EA5E9"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd"/></svg>'),
+
         badge: 'GEP'
       },
       {
+        // GSP — refresh arrows (circular sustainability loop)
         label: 'GSP Tasks', value: s.totalGSP,
         valueColor: '#7C3AED', iconBg: '#EDE9FE',
-        icon: '<svg width="20" height="20" viewBox="0 0 20 20" fill="#A78BFA"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>',
+        icon: this.svg('<svg width="20" height="20" viewBox="0 0 20 20" fill="#8B5CF6"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>'),
+
         badge: 'GSP'
       },
       {
+        // Pending Approvals — clock (pending) / shield-check (all clear)
         label: 'Pending Approvals', value: s.pendingApprovals,
-        valueColor: s.pendingApprovals > 0 ? '#DC2626' : '#16A34A', iconBg: s.pendingApprovals > 0 ? '#FEF2F2' : '#DCFCE7',
+        valueColor: s.pendingApprovals > 0 ? '#D97706' : '#16A34A', iconBg: s.pendingApprovals > 0 ? '#FEF3C7' : '#DCFCE7',
         icon: s.pendingApprovals > 0
-          ? '<svg width="20" height="20" viewBox="0 0 20 20" fill="#EF4444"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>'
-          : '<svg width="20" height="20" viewBox="0 0 20 20" fill="#4CAF50"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+          ? this.svg('<svg width="20" height="20" viewBox="0 0 20 20" fill="#F59E0B"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>')
+          : this.svg('<svg width="20" height="20" viewBox="0 0 20 20" fill="#16A34A"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>'),
+
         badge: null
       },
     ];
@@ -420,21 +463,49 @@ export class DashboardComponent implements OnInit {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   }
 
-  onApprove(): void {
+  openPromoteModal(): void {
+    if (!this.summary()?.canApprove) return;
+    this.promoteModal.set(true);
+  }
+
+  closePromoteModal(): void {
+    if (this.approving()) return;
+    this.promoteModal.set(false);
+  }
+
+  confirmPromote(): void {
     if (!this.summary()?.canApprove) return;
     this.approving.set(true);
     const name = this.authService.currentUser()?.fullName ?? 'Unknown';
     const role = this.role()!;
-    this.dashboardService.approve(role, name).subscribe(() => {
-      this.approving.set(false);
-      this.approved.set(true);
-      setTimeout(() => this.approved.set(false), 3000);
+    this.dashboardService.approve(role, name).subscribe({
+      next: (res) => {
+        this.approving.set(false);
+        this.promoteModal.set(false);
+        this.approved.set(true);
+        setTimeout(() => this.approved.set(false), 3000);
+        this.showToast(true, res.message || `Report successfully sent to ${this.nextRoleLabel()}.`);
+      },
+      error: (err) => {
+        this.approving.set(false);
+        this.promoteModal.set(false);
+        this.showToast(false, err?.error?.message || 'Failed to send report. Please try again.');
+      }
     });
+  }
+
+  onApprove(): void {
+    this.openPromoteModal();
   }
 
   downloadReport(type: 'farm-visits' | 'training'): void {
     const subs = this.filteredSubordinates();
     this.dashboardService.downloadReport({ type, format: 'csv' }, subs);
+  }
+
+  showToast(success: boolean, message: string): void {
+    this.toast.set({ success, message });
+    setTimeout(() => this.toast.set(null), 5000);
   }
 
   approveButtonStyle = computed((): string => {
@@ -466,13 +537,18 @@ export class DashboardComponent implements OnInit {
   }
 
   statusBadgeStyle(status: string): string {
+    const pending = 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEF9C3;color:#B45309;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;';
     const styles: Record<string, string> = {
-      approved: 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#DCFCE7;color:#16A34A;border-radius:20px;font-size:11px;font-weight:700;',
-      pending: 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEF9C3;color:#B45309;border-radius:20px;font-size:11px;font-weight:700;',
-      rejected: 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEE2E2;color:#DC2626;border-radius:20px;font-size:11px;font-weight:700;',
-      flagged: 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEF2F2;color:#DC2626;border-radius:20px;font-size:11px;font-weight:700;',
+      approved:    'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#DCFCE7;color:#16A34A;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;',
+      rejected:    'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#FEE2E2;color:#DC2626;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;',
+      pending_fc:  pending,
+      pending_pc:  pending,
+      pending_gl:  pending,
+      pending_csh: pending,
+      pending_sh:  pending,
+      pending_ch:  pending,
     };
-    return styles[status] ?? styles['pending'];
+    return styles[status] ?? pending;
   }
 
   kpiCardStyle(card: any): string {
@@ -485,7 +561,9 @@ export class DashboardComponent implements OnInit {
     `;
   }
 
-  badgeStyle(badge: string): string {
+  badgeStyle(badge: string, success?: boolean): string {
+    if (success === true)  return `padding:2px 8px;background:#DCFCE7;color:#16A34A;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:0.3px;white-space:nowrap;`;
+    if (success === false) return `padding:2px 8px;background:#FEF9C3;color:#92400E;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:0.3px;white-space:nowrap;`;
     const color = badge === 'GAP' ? '#C2389A' : badge === 'GEP' ? '#0284C7' : '#7C3AED';
     const bg = badge === 'GAP' ? '#FADDF2' : badge === 'GEP' ? '#E0F2FE' : '#EDE9FE';
     return `padding:2px 8px;background:${bg};color:${color};border-radius:20px;font-size:10px;font-weight:800;letter-spacing:0.5px;`;
