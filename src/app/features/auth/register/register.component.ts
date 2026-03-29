@@ -1,10 +1,12 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../../core/tokens';
 import { ROLE_LABELS, UserRole } from '../../../core/models';
+import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-register',
@@ -159,23 +161,46 @@ import { ROLE_LABELS, UserRole } from '../../../core/models';
               }
             </div>
 
-            <!-- Supervisor ID (full width) -->
+            <!-- Supervisor dropdown (full width) -->
             <div style="grid-column:1/-1;">
-              <label style="display:block;font-size:12.5px;font-weight:600;color:#374151;margin-bottom:6px;">Supervisor ID <span style="color:#DC2626;">*</span></label>
+              <label style="display:block;font-size:12.5px;font-weight:600;color:#374151;margin-bottom:6px;">Supervisor <span style="color:#DC2626;">*</span></label>
               <div style="position:relative;">
-                <input type="text" [ngModel]="supervisorId()" (ngModelChange)="supervisorId.set($event)" name="reg-supid" placeholder="Your supervisor's employee ID"
+                <select [ngModel]="supervisorId()" (ngModelChange)="supervisorId.set($event)" name="reg-supid"
                   class="reg-input"
-                  [class.reg-input--error]="touched.supervisorId && !supervisorId().trim()"
-                  [class.reg-input--ok]="touched.supervisorId && !!supervisorId().trim()"
+                  [attr.disabled]="(!selectedRole() || supervisorsLoading()) ? '' : null"
+                  [class.reg-input--error]="touched.supervisorId && !supervisorId()"
+                  [class.reg-input--ok]="touched.supervisorId && !!supervisorId()"
                   (blur)="touch('supervisorId')"
-                  style="width:100%;padding:11px 16px 11px 40px;border:1.5px solid #E5E7EB;border-radius:12px;font-size:14px;color:#1A1A1A;background:#F9FAFB;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s;"/>
+                  style="width:100%;padding:11px 36px 11px 40px;border:1.5px solid #E5E7EB;border-radius:12px;font-size:14px;color:#1A1A1A;background:#F9FAFB;outline:none;box-sizing:border-box;transition:border-color 0.2s;appearance:none;-webkit-appearance:none;"
+                  [style.opacity]="!selectedRole() ? '0.55' : '1'"
+                  [style.cursor]="!selectedRole() || supervisorsLoading() ? 'not-allowed' : 'pointer'">
+                  @if (!selectedRole()) {
+                    <option value="" disabled selected>Select a role first…</option>
+                  } @else if (supervisorsLoading()) {
+                    <option value="" disabled selected>Loading supervisors…</option>
+                  } @else if (!supervisors().length) {
+                    <option value="" disabled selected>No supervisors found for this role</option>
+                  } @else {
+                    <option value="" disabled>Select your supervisor…</option>
+                    @for (s of supervisors(); track s.id) {
+                      <option [value]="s.id">{{ s.fullName }}</option>
+                    }
+                  }
+                </select>
                 <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;" width="16" height="16" viewBox="0 0 20 20" fill="#9CA3AF"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-                @if (touched.supervisorId && !!supervisorId().trim()) {
-                  <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);" width="15" height="15" viewBox="0 0 20 20" fill="#16A34A"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                @if (supervisorsLoading()) {
+                  <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);animation:spin 1s linear infinite;pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="#E5E7EB" stroke-width="3"/>
+                    <path d="M12 2a10 10 0 0110 10" stroke="#821E75" stroke-width="3" stroke-linecap="round"/>
+                  </svg>
+                } @else if (touched.supervisorId && !!supervisorId()) {
+                  <svg style="position:absolute;right:28px;top:50%;transform:translateY(-50%);pointer-events:none;" width="15" height="15" viewBox="0 0 20 20" fill="#16A34A"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                } @else {
+                  <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;" width="13" height="13" viewBox="0 0 20 20" fill="#6B7280"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                 }
               </div>
-              @if (touched.supervisorId && !supervisorId().trim()) {
-                <p style="margin:4px 0 0;font-size:11.5px;color:#EF4444;">Supervisor ID is required.</p>
+              @if (touched.supervisorId && !supervisorId()) {
+                <p style="margin:4px 0 0;font-size:11.5px;color:#EF4444;">Please select a supervisor.</p>
               }
             </div>
 
@@ -322,6 +347,8 @@ export class RegisterComponent {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL);
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   email = signal('');
   fullName = signal('');
@@ -335,6 +362,33 @@ export class RegisterComponent {
   errorMsg = signal('');
   showPw = signal(false);
   showConfirmPw = signal(false);
+
+  supervisors = signal<{ id: string; fullName: string }[]>([]);
+  supervisorsLoading = signal(false);
+
+  private readonly _supervisorEffect = effect(() => {
+    const role = this.selectedRole();
+    this.supervisorId.set('');
+    this.supervisors.set([]);
+    if (!role) return;
+    const roleEnum = RegisterComponent.ROLE_ENUM[role] ?? 6;
+    const supervisorRoleEnum = roleEnum - 1;
+    if (supervisorRoleEnum < 0) return; // CH has no supervisor tier
+    this.supervisorsLoading.set(true);
+    this.http.get<{ success: boolean; data: { items: { id: string; fullName: string }[] } }>(
+      `${this.baseUrl}/api/Users`,
+      { params: { Role: supervisorRoleEnum.toString(), PageNumber: '1', PageSize: '100' } }
+    ).subscribe({
+      next: (res) => {
+        this.supervisors.set(res?.data?.items ?? []);
+        this.supervisorsLoading.set(false);
+      },
+      error: () => {
+        this.supervisors.set([]);
+        this.supervisorsLoading.set(false);
+      },
+    });
+  }, { allowSignalWrites: true });
 
   touched = {
     email: false, fullName: false, employeeId: false,
@@ -396,7 +450,7 @@ export class RegisterComponent {
       this.fullName().trim().length >= 2,
       !!this.employeeId().trim(),
       !!this.selectedRole(),
-      !!this.supervisorId().trim(),
+      !!this.supervisorId(),
       this.pwValid() && !!this.confirmPassword() && this.confirmPassword() === this.password(),
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
@@ -415,7 +469,7 @@ export class RegisterComponent {
     this.fullName().trim().length >= 2 &&
     !!this.employeeId().trim() &&
     !!this.selectedRole() &&
-    !!this.supervisorId().trim() &&
+    !!this.supervisorId() &&
     this.pwValid() &&
     !!this.confirmPassword() &&
     this.confirmPassword() === this.password()
@@ -442,16 +496,40 @@ export class RegisterComponent {
       }
     ).subscribe({
       next: (res) => {
-        this.loading.set(false);
         if (res.success) {
-          this.router.navigate(['/auth/login'], { queryParams: { registered: '1' } });
+          this.toast.show(
+            'Account Created!',
+            'Your account was created successfully. Signing you in…',
+            'success'
+          );
+          this.authService.login({ email: this.email().trim(), password: this.password() }).subscribe({
+            next: () => {
+              this.loading.set(false);
+              this.router.navigate(['/dashboard']);
+            },
+            error: () => {
+              // Registration succeeded but auto-login failed — send to login page
+              this.loading.set(false);
+              this.toast.show(
+                'Sign-in Failed',
+                'Account created, but we could not sign you in automatically. Please log in.',
+                'warning'
+              );
+              this.router.navigate(['/auth/login'], { queryParams: { registered: '1' } });
+            },
+          });
         } else {
-          this.errorMsg.set(res.message ?? 'Registration failed. Please try again.');
+          this.loading.set(false);
+          const msg = res.message ?? 'Registration failed. Please try again.';
+          this.errorMsg.set(msg);
+          this.toast.show('Registration Failed', msg, 'error');
         }
       },
       error: (err) => {
         this.loading.set(false);
-        this.errorMsg.set(err?.error?.message ?? 'Registration failed. Please try again.');
+        const msg = err?.error?.message ?? 'Registration failed. Please try again.';
+        this.errorMsg.set(msg);
+        this.toast.show('Registration Failed', msg, 'error');
       },
     });
   }
