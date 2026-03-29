@@ -1,11 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Purple rounded background -->
   <rect width="48" height="48" rx="10" fill="#821E75"/>
-  <!-- "o" ring with person silhouette -->
-  <circle cx="17" cy="20" r="13.5" stroke="white" stroke-width="2.8" fill="none"/>
-  <circle cx="17" cy="15.5" r="4.6" fill="white"/>
-  <path d="M6.5 29 C6.5 23 27.5 23 27.5 29" fill="white"/>
-  <!-- "fi" letters -->
-  <path d="M34.5 11 C34.8 9 36.2 8 38 8 C38.9 8 39.5 8.3 39.5 8.3 L39.5 10.2 C38.9 10 38.3 9.7 37.7 9.7 C36.5 9.7 36 10.4 36 11.3 L36 13.8 L39.6 13.8 L39.6 15.7 L36 15.7 L36 28 L34.5 28 Z" fill="white"/>
-  <circle cx="43.5" cy="10.5" r="2" fill="white"/>
-  <rect x="41.8" y="13.8" width="3.5" height="14.2" rx="0.3" fill="white"/>
+  <!-- O: full ring -->
+  <circle cx="14" cy="24" r="10.5" stroke="white" stroke-width="2.6" fill="none"/>
+  <!-- O: person head -->
+  <circle cx="14" cy="19.5" r="3.6" fill="white"/>
+  <!-- O: person shoulders -->
+  <path d="M5.2 30.5 C5.2 25.5 22.8 25.5 22.8 30.5" fill="white"/>
+  <!-- F -->
+  <path d="M27 10.5 C27.3 8.2 28.9 7 31.2 7 C32.3 7 33.1 7.4 33.1 7.4 L33.1 9.5 C32.4 9.2 31.6 8.9 30.8 8.9 C29.5 8.9 29 9.8 29 10.8 L29 13.6 L33.1 13.6 L33.1 15.5 L29 15.5 L29 29 L27 29 Z" fill="white"/>
+  <!-- I dot -->
+  <circle cx="38" cy="8.5" r="2" fill="white"/>
+  <!-- I body -->
+  <rect x="36.2" y="13.6" width="3.6" height="15.4" rx="0.4" fill="white"/>
 </svg>
