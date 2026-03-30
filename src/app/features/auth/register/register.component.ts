@@ -372,8 +372,7 @@ export class RegisterComponent {
     this.supervisors.set([]);
     if (!role) return;
     const roleEnum = RegisterComponent.ROLE_ENUM[role] ?? 6;
-    const supervisorRoleEnum = roleEnum - 1;
-    if (supervisorRoleEnum < 0) return; // CH has no supervisor tier
+    const supervisorRoleEnum = Math.max(0, roleEnum - 1);
     this.supervisorsLoading.set(true);
     this.http.get<{ success: boolean; data: { items: { id: string; fullName: string }[] } }>(
       `${this.baseUrl}/api/Users`,
@@ -396,10 +395,12 @@ export class RegisterComponent {
   };
   touch(field: string): void { this.touched[field as keyof typeof this.touched] = true; }
 
-  roleOptions = (Object.keys(ROLE_LABELS) as UserRole[]).map(r => ({
-    value: r,
-    label: `${ROLE_LABELS[r]} (${r})`,
-  }));
+  roleOptions = (Object.keys(ROLE_LABELS) as UserRole[])
+    .filter(r => r !== 'FO')
+    .map(r => ({
+      value: r,
+      label: `${ROLE_LABELS[r]} (${r})`,
+    }));
 
   pwCriteria = computed(() => {
     const p = this.password();

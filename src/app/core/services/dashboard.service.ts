@@ -110,6 +110,35 @@ export class DashboardService {
     );
   }
 
+  getReports(): Observable<DashboardSummary> {
+    return this.api.get<ApiResult<{ items: DashboardApiReport[]; totalCount: number }>>(
+      '/api/Reports?PageNumber=1&PageSize=100'
+    ).pipe(
+      map(res => {
+        const items = res.data?.items ?? [];
+        const subordinates = items.map(r => this.mapReport(r));
+        const approvedCount = subordinates.filter(s => s.status === 'approved').length;
+        const pendingApprovals = subordinates.filter(s => s.status !== 'approved' && s.status !== 'rejected').length;
+        const totalCount = res.data?.totalCount ?? items.length;
+        return {
+          totalSubordinates: totalCount,
+          reportSubmittedCount: items.length,
+          allSubmitted: items.length >= totalCount && totalCount > 0,
+          totalFarmersVisited: items.reduce((sum, r) => sum + r.farmersVisited, 0),
+          totalGAP: items.reduce((sum, r) => sum + r.gapCount, 0),
+          totalGEP: items.reduce((sum, r) => sum + r.gepCount, 0),
+          totalGSP: items.reduce((sum, r) => sum + r.gspCount, 0),
+          pendingApprovals,
+          approvedCount,
+          canApprove: false,
+          isWeeklyReportSent: false,
+          lastUpdated: new Date().toISOString(),
+          subordinates,
+        } as DashboardSummary;
+      })
+    );
+  }
+
   approve(role: UserRole, approverName: string): Observable<{ success: boolean; message: string }> {
     // TODO: Replace with real approve endpoint
     return of({ success: true, message: 'Report approved and promoted to next level.' }).pipe(delay(1200));

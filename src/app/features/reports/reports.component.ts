@@ -529,9 +529,7 @@ export class ReportsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const role = this.role();
-    if (!role) return;
-    this.dashboardService.getDashboard(role).subscribe(data => {
+    this.dashboardService.getReports().subscribe(data => {
       this.summary.set(data);
       this.loading.set(false);
     });
