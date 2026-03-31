@@ -104,7 +104,7 @@ export class DashboardService {
     return forkJoin([
       this.api.get<ApiResult<DashboardApiData>>('/api/Dashboard'),
       this.api.get<ApiResult<SubordinatesApiData>>(
-        '/api/Users/subordinates?PageNumber=3230&PageSize=3230'
+        '/api/Users/subordinates?PageNumber=1&PageSize=100'
       ).pipe(catchError(() => of({ success: true, message: '', data: { totalCount: 0, items: [] }, errors: null }))),
     ]).pipe(
       map(([dashRes, subsRes]) =>

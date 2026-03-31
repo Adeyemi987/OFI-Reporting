@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: ofi-reporting
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: dist/ofi-reporting/browser
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
