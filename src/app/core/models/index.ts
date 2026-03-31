@@ -165,7 +165,7 @@ export interface SubordinatesApiData {
 
 // ─── Download Report ───────────────────────────────────────────────────────────
 export interface DownloadOptions {
-  type: 'farm-visits' | 'training';
+  type: 'farm-visits' | 'training' | 'summary';
   format: 'csv' | 'excel';
   dateFrom?: string;
   dateTo?: string;

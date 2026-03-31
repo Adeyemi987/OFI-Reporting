@@ -69,44 +69,81 @@ import { ROLE_LABELS, UserRole } from '../../core/models';
         }
       </nav>
 
-      <!-- User Card at bottom -->
-      <div style="
-        margin-top: auto; padding-top: 20px;
-        border-top: 1px solid rgba(255,255,255,0.1);
-      ">
-        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-radius: 10px; background: rgba(255,255,255,0.08);">
-          <div [style]="'width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;box-shadow:0 4px 10px rgba(0,0,0,0.2);background:linear-gradient(135deg,rgba(255,255,255,0.25),rgba(255,255,255,0.1));'">{{ userInitials() }}</div>
-          @if (expanded) {
-            <div style="min-width: 0; animation: fadeIn 0.2s ease-out;">
-              <div style="font-size: 13px; font-weight: 700; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                {{ user()?.fullName }}
+      <!-- User Card + Sign Out — bottom section -->
+      <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+
+        @if (expanded) {
+          <!-- ── EXPANDED: user info card + full sign-out button ── -->
+          <div style="animation: fadeIn 0.2s ease-out;">
+            <!-- User info -->
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 10px 12px;background:rgba(0,0,0,0.15);border-radius:14px 14px 0 0;border:1px solid rgba(255,255,255,0.07);border-bottom:none;">
+              <div style="width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;box-shadow:0 4px 10px rgba(0,0,0,0.2);background:linear-gradient(135deg,rgba(255,255,255,0.3),rgba(255,255,255,0.12));">{{ userInitials() }}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ user()?.fullName }}</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:1px;">{{ roleLabel() }}</div>
               </div>
-              <div style="font-size: 11px; color: rgba(255,255,255,0.5);">{{ roleLabel() }}</div>
             </div>
-          }
-        </div>
-        <button (click)="showLogoutConfirm.set(true)" style="
-          margin-top: 8px; width: 100%; padding: 9px;
-          background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
-          border-radius: 10px; color: #FCA5A5; font-size: 13px; font-weight: 600;
-          cursor: pointer; transition: all 0.2s; display: flex; align-items: center;
-          justify-content: center; gap: 6px;
-        "
-class="sidebar-logout-btn"
-        >
-          <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/>
-          </svg>
-          @if (expanded) {
-            <span style="animation: fadeIn 0.2s ease-out;">Sign Out</span>
-          }
-        </button>
+            <!-- Sign out button -->
+            <button (click)="showLogoutConfirm.set(true)" class="sidebar-logout-btn" style="
+              width:100%; padding:10px 14px; margin:0;
+              background:linear-gradient(135deg, rgba(239,68,68,0.35), rgba(185,28,28,0.25));
+              border:1px solid rgba(239,68,68,0.45); border-top:none;
+              border-radius:0 0 14px 14px;
+              color:#FCA5A5; font-size:13px; font-weight:700;
+              cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+              transition:all 0.2s; letter-spacing:0.2px;
+            ">
+              <!-- Power (sign-out) icon -->
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sign Out
+            </button>
+          </div>
+
+        } @else {
+          <!-- ── CONTRACTED: avatar + glowing red power button ── -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+            <!-- Avatar -->
+            <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;box-shadow:0 4px 10px rgba(0,0,0,0.2);background:linear-gradient(135deg,rgba(255,255,255,0.3),rgba(255,255,255,0.12));">{{ userInitials() }}</div>
+            <!-- Red glowing power / sign-out button -->
+            <button
+              (click)="showLogoutConfirm.set(true)"
+              title="Sign Out"
+              class="sidebar-logout-btn sidebar-logout-pulse"
+              style="
+                width:38px; height:38px; border-radius:50%; padding:0;
+                background:rgba(239,68,68,0.22);
+                border:1.5px solid rgba(239,68,68,0.55);
+                color:#FCA5A5; cursor:pointer;
+                display:flex; align-items:center; justify-content:center;
+                box-shadow:0 0 0 0 rgba(239,68,68,0.4);
+                transition:all 0.2s;
+              "
+            >
+              <!-- Power symbol — universally = sign out -->
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="12" y1="2" x2="12" y2="12"/>
+                <path d="M7.2 5.8A8 8 0 1016.8 5.8"/>
+              </svg>
+            </button>
+          </div>
+        }
+
       </div>
 
       <style>
         .active-nav { background: rgba(255,255,255,0.18) !important; color: white !important; font-weight: 600 !important; }
         .nav-link:hover { background: rgba(255,255,255,0.12) !important; color: white !important; }
-        .sidebar-logout-btn:hover { background: rgba(239,68,68,0.25) !important; color: #FEE2E2 !important; }
+        .sidebar-logout-btn:hover { background: rgba(239,68,68,0.4) !important; border-color: rgba(239,68,68,0.7) !important; color: #FEE2E2 !important; }
+        .sidebar-logout-pulse { animation: signOutPulse 2.8s ease-in-out infinite; }
+        .sidebar-logout-pulse:hover { animation: none !important; box-shadow: 0 0 18px rgba(239,68,68,0.65) !important; transform: scale(1.08); }
+        @keyframes signOutPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.35); }
+          50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+        }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       </style>
     </aside>
@@ -123,8 +160,10 @@ class="sidebar-logout-btn"
         >
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
             <div style="width:44px;height:44px;border-radius:12px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="#DC2626">
-                <path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
             </div>
             <div>
@@ -142,8 +181,10 @@ class="sidebar-logout-btn"
               (click)="onLogout()"
               style="padding:10px 24px;border:none;border-radius:10px;background:#DC2626;color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;"
             >
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
               Yes, Sign Out
             </button>

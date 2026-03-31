@@ -27,6 +27,7 @@ import { ThemeService } from '../../core/services/theme.service';
       <div style="flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden;">
         <app-header
           [title]="pageTitle()"
+          [sidebarExpanded]="sidebarExpanded()"
           (toggleSidebar)="sidebarExpanded.set(!sidebarExpanded())"
         ></app-header>
         <main class="ofi-main-content" style="flex: 1; overflow-y: auto; padding: 24px; box-sizing: border-box;">

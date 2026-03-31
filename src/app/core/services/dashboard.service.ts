@@ -1,12 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, of, forkJoin } from 'rxjs';
 import { map, delay, catchError } from 'rxjs/operators';
+import * as XLSX from 'xlsx';
 import { ApiService } from './api.service';
 import {
   DashboardSummary, SubordinateReport, ApprovalStatus,
   DownloadOptions, UserRole,
   DashboardApiData, DashboardApiReport, ApiResult,
-  ROLE_READY_MAPPED_STATUS, SubordinatesApiData
+  ROLE_READY_MAPPED_STATUS, SubordinatesApiData, ROLE_HIERARCHY
 } from '../models';
 
 // Handles numeric enum values (default .NET serialization)
@@ -47,11 +48,11 @@ export class DashboardService {
     return STATUS_MAP_NUMERIC[status] ?? 'pending_fc';
   }
 
-  private mapReport(r: DashboardApiReport): SubordinateReport {
+  private mapReport(r: DashboardApiReport, subordinateRole: UserRole): SubordinateReport {
     return {
       userId: r.reportId,
       fullName: r.userName,
-      role: 'FO',
+      role: subordinateRole,
       farmersVisited: r.farmersVisited,
       gapCount: r.gapCount,
       gepCount: r.gepCount,
@@ -69,7 +70,9 @@ export class DashboardService {
     role: UserRole,
     totalSubordinates: number
   ): DashboardSummary {
-    const subordinates = data.subordinateReports.map(r => this.mapReport(r));
+    const idx = ROLE_HIERARCHY.indexOf(role);
+    const subordinateRole: UserRole = idx > 0 ? ROLE_HIERARCHY[idx - 1] : 'FO';
+    const subordinates = data.subordinateReports.map(r => this.mapReport(r, subordinateRole));
     const reportSubmittedCount = (data.pendingReportCount ?? 0) + (data.approvedReportCount ?? 0);
     const allSubmitted = totalSubordinates > 0 && reportSubmittedCount >= totalSubordinates;
     const readyStatus = ROLE_READY_MAPPED_STATUS[role];
@@ -110,13 +113,15 @@ export class DashboardService {
     );
   }
 
-  getReports(): Observable<DashboardSummary> {
+  getReports(role: UserRole): Observable<DashboardSummary> {
     return this.api.get<ApiResult<{ items: DashboardApiReport[]; totalCount: number }>>(
       '/api/Reports?PageNumber=1&PageSize=100'
     ).pipe(
       map(res => {
         const items = res.data?.items ?? [];
-        const subordinates = items.map(r => this.mapReport(r));
+        const idx = ROLE_HIERARCHY.indexOf(role);
+        const subordinateRole: UserRole = idx > 0 ? ROLE_HIERARCHY[idx - 1] : 'FO';
+        const subordinates = items.map(r => this.mapReport(r, subordinateRole));
         const approvedCount = subordinates.filter(s => s.status === 'approved').length;
         const pendingApprovals = subordinates.filter(s => s.status !== 'approved' && s.status !== 'rejected').length;
         const totalCount = res.data?.totalCount ?? items.length;
@@ -157,35 +162,97 @@ export class DashboardService {
   }
 
   downloadReport(options: DownloadOptions, data: SubordinateReport[]): void {
-    const headers = options.type === 'farm-visits'
-      ? ['Full Name', 'Role', 'Farmers Visited', 'GAP', 'GEP', 'GSP', 'Status', 'Approval Date', 'Approved By']
-      : ['Full Name', 'Role', 'Training Title', 'Category', 'Date', 'Participants', 'Location'];
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `ofi_${options.type}_report_${dateStr}`;
 
-    let csvContent = headers.join(',') + '\n';
-
-    if (options.type === 'farm-visits') {
-      data.forEach(s => {
-        csvContent += [
-          `"${s.fullName}"`, s.role, s.farmersVisited,
-          s.gapCount, s.gepCount, s.gspCount,
-          s.status, s.approvalDate ?? '', s.approvedBy ?? ''
-        ].join(',') + '\n';
-      });
+    if (options.format === 'excel') {
+      this.downloadExcel(options.type, data, filename);
     } else {
-      data.forEach(s => {
-        s.trainingSessions.forEach(ts => {
-          csvContent += [
-            `"${s.fullName}"`, s.role, `"${ts.title}"`,
-            ts.category, ts.date, ts.participants, `"${ts.location}"`
-          ].join(',') + '\n';
-        });
-      });
+      this.downloadCsv(options.type, data, filename);
     }
+  }
+
+  private buildSummaryRows(data: SubordinateReport[]): unknown[][] {
+    const header = ['Full Name', 'Role', 'Farmers Visited', 'GAP Tasks', 'GEP Tasks', 'GSP Tasks', 'Status', 'Approval Date', 'Approved By'];
+    const rows = data.map(s => [
+      s.fullName, s.role, s.farmersVisited,
+      s.gapCount, s.gepCount, s.gspCount,
+      s.status, s.approvalDate ?? '', s.approvedBy ?? '',
+    ]);
+    return [header, ...rows];
+  }
+
+  private buildFarmVisitRows(data: SubordinateReport[]): unknown[][] {
+    const header = ['Full Name', 'Role', 'Task Title', 'Category', 'Farmers Visited', 'Location', 'Completed Date', 'Notes'];
+    const rows: unknown[][] = [];
+    data.forEach(s => {
+      if (s.tasks.length === 0) {
+        rows.push([s.fullName, s.role, '—', '', '', '', '', '']);
+      } else {
+        s.tasks.forEach(t => rows.push([
+          s.fullName, s.role, t.title, t.category,
+          t.farmersVisited, t.location, t.completedDate, t.notes ?? '',
+        ]));
+      }
+    });
+    return [header, ...rows];
+  }
+
+  private buildTrainingRows(data: SubordinateReport[]): unknown[][] {
+    const header = ['Full Name', 'Role', 'Training Title', 'Category', 'Date', 'Participants', 'Community/Location'];
+    const rows: unknown[][] = [];
+    data.forEach(s => {
+      if (s.trainingSessions.length === 0) {
+        rows.push([s.fullName, s.role, '—', '', '', '', '']);
+      } else {
+        s.trainingSessions.forEach(ts => rows.push([
+          s.fullName, s.role, ts.title, ts.category,
+          ts.date, ts.participants, ts.location,
+        ]));
+      }
+    });
+    return [header, ...rows];
+  }
+
+  private downloadExcel(type: DownloadOptions['type'], data: SubordinateReport[], filename: string): void {
+    const wb = XLSX.utils.book_new();
+
+    if (type === 'summary' || type === 'farm-visits') {
+      const summarySheet = XLSX.utils.aoa_to_sheet(this.buildSummaryRows(data));
+      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+    }
+    if (type === 'summary' || type === 'farm-visits') {
+      const fvSheet = XLSX.utils.aoa_to_sheet(this.buildFarmVisitRows(data));
+      XLSX.utils.book_append_sheet(wb, fvSheet, 'Farm Visits');
+    }
+    if (type === 'summary' || type === 'training') {
+      const trainSheet = XLSX.utils.aoa_to_sheet(this.buildTrainingRows(data));
+      XLSX.utils.book_append_sheet(wb, trainSheet, 'Training Sessions');
+    }
+
+    XLSX.writeFile(wb, `${filename}.xlsx`);
+  }
+
+  private downloadCsv(type: DownloadOptions['type'], data: SubordinateReport[], filename: string): void {
+    let rows: unknown[][];
+    if (type === 'training') {
+      rows = this.buildTrainingRows(data);
+    } else {
+      // 'farm-visits' or 'summary' → export summary overview for CSV
+      rows = this.buildSummaryRows(data);
+    }
+
+    const csvContent = rows.map(row =>
+      row.map(cell => {
+        const s = String(cell ?? '');
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+      }).join(',')
+    ).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `ofi_${options.type}_report_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `${filename}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
   }

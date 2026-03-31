@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, computed, inject } from '@angular/core';
+import { Component, input, output, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -10,20 +10,31 @@ import { ROLE_LABELS } from '../../core/models';
   imports: [CommonModule],
   template: `
     <header [style]="headerStyle()">
-      <!-- Hamburger -->
+      <!-- Sidebar toggle -->
       <button
         (click)="toggleSidebar.emit()"
         class="ofi-icon-btn"
+        [title]="sidebarExpanded() ? 'Collapse sidebar' : 'Expand sidebar'"
         [style]="'width:38px;height:38px;border-radius:10px;background:var(--border-light);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;'"
       >
-        <svg width="18" height="18" viewBox="0 0 20 20" [attr.fill]="iconColor()">
-          <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
-        </svg>
+        @if (sidebarExpanded()) {
+          <!-- Collapse: right bar + left-pointing chevron (←|) -->
+          <svg width="18" height="18" viewBox="0 0 20 20" [attr.fill]="iconColor()">
+            <path d="M14 3h3v14h-3V3z"/>
+            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+        } @else {
+          <!-- Expand: left bar + right-pointing chevron (|→) -->
+          <svg width="18" height="18" viewBox="0 0 20 20" [attr.fill]="iconColor()">
+            <path d="M3 3h3v14H3V3z"/>
+            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+          </svg>
+        }
       </button>
 
       <!-- Breadcrumb area -->
       <div style="flex: 1;">
-        <div style="font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.3px;">{{ title }}</div>
+        <div style="font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.3px;">{{ title() }}</div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:1px;">
           {{ roleLabel() }} &nbsp;·&nbsp; {{ currentDate }}
         </div>
@@ -54,8 +65,9 @@ import { ROLE_LABELS } from '../../core/models';
   `
 })
 export class HeaderComponent {
-  @Input() title = 'Dashboard';
-  @Output() toggleSidebar = new EventEmitter<void>();
+  title = input('Dashboard');
+  sidebarExpanded = input(true);
+  toggleSidebar = output<void>();
 
   notifCount = 3;
   currentDate = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
