@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: '', // TODO: Replace with production API base URL
+  apiUrl: 'https://ofi-reporting-machine-api.onrender.com',
   appName: 'OFI Reporting',
   version: '1.0.0'
 };
