@@ -174,7 +174,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
                 </tr>
               </thead>
               <tbody>
-                @for (sub of filteredSubordinates(); track sub.userId; let i = $index) {
+                @for (sub of pagedSubordinates(); track sub.userId; let i = $index) {
                   <!-- Main row -->
                   <tr
                     (click)="goToDetails(sub)"
@@ -325,6 +325,40 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
                 <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
               </svg>
               <p style="margin:0;font-size:14px;">No records match your filters.</p>
+            </div>
+          }
+          <!-- Pagination -->
+          @if (!loading() && totalPages() > 1) {
+            <div style="
+              display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+              padding:16px 24px;border-top:1px solid #F3F4F6;background:#FAFAFA;
+            ">
+              <span style="font-size:12px;color:#9CA3AF;font-weight:500;">
+                Showing {{ (currentPage()-1)*pageSize + 1 }}–{{ currentPage()*pageSize > filteredSubordinates().length ? filteredSubordinates().length : currentPage()*pageSize }} of {{ filteredSubordinates().length }}
+              </span>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <button
+                  (click)="prevPage()"
+                  [disabled]="currentPage() === 1"
+                  [style.opacity]="currentPage() === 1 ? '0.4' : '1'"
+                  [style.cursor]="currentPage() === 1 ? 'not-allowed' : 'pointer'"
+                  style="width:34px;height:34px;border:1.5px solid #E5E7EB;border-radius:8px;background:white;color:#374151;display:flex;align-items:center;justify-content:center;transition:all 0.2s;"
+                >
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                </button>
+                @for (pg of pageNumbers(); track pg) {
+                  <button (click)="setPage(pg)" [style]="getPgBtnStyle(pg)">{{ pg }}</button>
+                }
+                <button
+                  (click)="nextPage()"
+                  [disabled]="currentPage() === totalPages()"
+                  [style.opacity]="currentPage() === totalPages() ? '0.4' : '1'"
+                  [style.cursor]="currentPage() === totalPages() ? 'not-allowed' : 'pointer'"
+                  style="width:34px;height:34px;border:1.5px solid #E5E7EB;border-radius:8px;background:white;color:#374151;display:flex;align-items:center;justify-content:center;transition:all 0.2s;"
+                >
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                </button>
+              </div>
             </div>
           }
         </div>
@@ -502,6 +536,27 @@ export class ReportsComponent implements OnInit {
       return matchName && matchStatus && matchCat && matchDate;
     });
   });
+
+  readonly pageSize = 10;
+  currentPage = signal(1);
+  totalPages = computed(() => Math.max(1, Math.ceil(this.filteredSubordinates().length / this.pageSize)));
+  pageNumbers = computed(() => Array.from({ length: this.totalPages() }, (_, i) => i + 1));
+  pagedSubordinates = computed(() => {
+    const items = this.filteredSubordinates();
+    const page = Math.min(this.currentPage(), this.totalPages());
+    const start = (page - 1) * this.pageSize;
+    return items.slice(start, start + this.pageSize);
+  });
+
+  setPage(page: number): void { this.currentPage.set(Math.max(1, Math.min(page, this.totalPages()))); }
+  prevPage(): void { this.setPage(this.currentPage() - 1); }
+  nextPage(): void { this.setPage(this.currentPage() + 1); }
+
+  getPgBtnStyle(pg: number): string {
+    return this.currentPage() === pg
+      ? 'width:34px;height:34px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#8B2D73,#D047AE);color:white;border:none;box-shadow:0 2px 8px rgba(208,71,174,0.35);'
+      : 'width:34px;height:34px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:white;color:#374151;border:1.5px solid #E5E7EB;';
+  }
 
   ngOnInit(): void {
     this.dashboardService.getReports(this.role()!).subscribe(data => {

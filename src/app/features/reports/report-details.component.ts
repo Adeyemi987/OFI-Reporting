@@ -326,8 +326,24 @@ export class ReportDetailsComponent implements OnInit {
     
     this.dashboardService.getReportDetails(userId).subscribe({
       next: (response: any) => {
-        if (response.success && response.data) {
-          this.details.set(response.data);
+        console.log('[ReportDetails] Component received:', response);
+        // Handle both { success, data } wrapper and direct data object
+        const payload = response?.data ?? response;
+        if (payload) {
+          // Normalize field names (API may return PascalCase from .NET)
+          const normalized = {
+            fullName: payload.fullName ?? payload.FullName ?? payload.userName ?? payload.UserName,
+            role: payload.role ?? payload.Role,
+            farmersVisited: payload.totalFarmersVisited ?? payload.farmersVisited ?? payload.FarmersVisited ?? 0,
+            gapCount: payload.gapTaskCount ?? payload.gapCount ?? payload.GapCount ?? 0,
+            gepCount: payload.gepTaskCount ?? payload.gepCount ?? payload.GepCount ?? 0,
+            gspCount: payload.gspTaskCount ?? payload.gspCount ?? payload.GspCount ?? 0,
+            taskRecords: payload.taskRecords ?? payload.TaskRecords ?? payload.tasks ?? payload.Tasks ?? [],
+            trainingSessions: payload.trainingSessions ?? payload.TrainingSessions ?? [],
+            farmerVisits: payload.farmerVisits ?? payload.FarmerVisits ?? payload.farmVisits ?? payload.FarmVisits ?? [],
+          };
+          console.log('[ReportDetails] Normalized payload:', normalized);
+          this.details.set(normalized);
           this.error.set(null);
         } else {
           this.error.set('Failed to load report details');

@@ -56,5 +56,15 @@ export const routes: Routes = [
       }
     ]
   },
-  { path: '**', redirectTo: 'dashboard' }
+  {
+    path: 'not-found',
+    loadComponent: () =>
+      import('./features/errors/not-found.component').then(m => m.NotFoundComponent)
+  },
+  {
+    path: 'error',
+    loadComponent: () =>
+      import('./features/errors/server-error.component').then(m => m.ServerErrorComponent)
+  },
+  { path: '**', redirectTo: 'not-found' }
 ];

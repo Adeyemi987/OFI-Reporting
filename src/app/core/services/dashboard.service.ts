@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, of, forkJoin } from 'rxjs';
-import { map, delay, catchError } from 'rxjs/operators';
+import { map, delay, catchError, tap } from 'rxjs/operators';
 import * as XLSX from 'xlsx';
 import { ApiService } from './api.service';
 import {
@@ -114,7 +114,9 @@ export class DashboardService {
   }
 
   getReportDetails(reportId: string): Observable<ApiResult<any>> {
-    return this.api.get<ApiResult<any>>(`/api/Reports/${reportId}`);
+    return this.api.get<ApiResult<any>>(`/api/Reports/${reportId}`).pipe(
+      tap(response => console.log('[ReportDetails] Raw API response:', JSON.stringify(response, null, 2)))
+    );
   }
 
   getReports(role: UserRole): Observable<DashboardSummary> {
