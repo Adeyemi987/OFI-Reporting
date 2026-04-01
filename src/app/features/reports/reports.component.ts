@@ -1,4 +1,5 @@
 import { Component, OnInit, signal, computed, inject, HostListener } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
@@ -32,7 +33,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
             <span style="color:rgba(255,255,255,0.7);font-size:13px;">{{ roleLabel() }}</span>
           </div>
           <h1 style="margin:0;font-size:28px;font-weight:900;color:white;letter-spacing:-0.5px;">Detailed Reports</h1>
-          <p style="margin:8px 0 0;color:rgba(255,255,255,0.7);font-size:14px;">Farm visit &amp; training details for {{ subordinateLabel() }} · Click any row to expand</p>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.7);font-size:14px;">Farm visit &amp; training details for {{ subordinateLabel() }} · Click any row to view details</p>
         </div>
       </div>
 
@@ -63,7 +64,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
           </div>
           <div>
             <div style="font-size:13px;font-weight:700;color:#8B2D73;">How to view details</div>
-            <div style="font-size:12px;color:#C2389A;margin-top:2px;">Click on any record below to expand and view their detailed <strong>Task</strong> and <strong>Training</strong> information. Use the category filter inside each expanded view to narrow results.</div>
+            <div style="font-size:12px;color:#C2389A;margin-top:2px;">Click on any record below to navigate to the details page and view their full <strong>Tasks</strong> and <strong>Training</strong> information.</div>
           </div>
         </div>
 
@@ -79,7 +80,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
           ">
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:800;color:#1A1A1A;">{{ subordinateLabel() }} Details</h2>
-              <p style="margin:4px 0 0;font-size:12px;color:#9CA3AF;">{{ filteredSubordinates().length }} records · Click any row to expand task &amp; training details</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#9CA3AF;">{{ filteredSubordinates().length }} records · Click any row to view details</p>
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <!-- Approved badge -->
@@ -170,7 +171,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
                 @for (sub of filteredSubordinates(); track sub.userId; let i = $index) {
                   <!-- Main row -->
                   <tr
-                    (click)="toggleExpand(sub)"
+                    (click)="goToDetails(sub)"
                     class="table-row-hover"
                     [style]="rowStyle(sub, i)"
                   >
@@ -294,7 +295,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
                                 transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;
                               "
                             >
-                              <option value="" disabled selected>👆 Choose action…</option>
+                              <option value="" disabled selected>Choose action…</option>
                               <option value="approve">✓ Approve</option>
                               <option value="reject">✕ Reject</option>
                             </select>
@@ -306,107 +307,6 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
                       }
                     </td>
                   </tr>
-
-                  <!-- Expanded detail row -->
-                  @if (sub.isExpanded) {
-                    <tr style="animation: expandRow 0.3s ease-out;">
-                      <td colspan="7" style="background:#FDF2FB;border-top:1px solid #F0B8E0;border-bottom:2px solid #E068C4;">
-                        <div style="padding:20px 24px;">
-
-                          <!-- Tabs + Category Filter -->
-                          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
-                            <div style="display:flex;gap:8px;">
-                              @for (tab of ['Tasks', 'Training']; track tab) {
-                                <button
-                                  (click)="setActiveTab(sub.userId, tab); $event.stopPropagation()"
-                                  [style]="tabStyle(sub.userId, tab)"
-                                >{{ tab }}</button>
-                              }
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px;" (click)="$event.stopPropagation()">
-                              <svg width="14" height="14" viewBox="0 0 20 20" fill="#C2389A"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/></svg>
-                              <select
-                                [ngModel]="getExpandCategoryFilter(sub.userId)"
-                                (ngModelChange)="setExpandCategoryFilter(sub.userId, $event)"
-                                style="
-                                  padding:5px 10px;border:1.5px solid #F0B8E0;border-radius:8px;
-                                  font-size:12px;font-weight:600;color:#8B2D73;
-                                  background:white;outline:none;cursor:pointer;
-                                "
-                              >
-                                <option value="">All Categories</option>
-                                <option value="GAP">GAP</option>
-                                <option value="GEP">GEP</option>
-                                <option value="GSP">GSP</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <!-- Tasks Tab -->
-                          @if (getActiveTab(sub.userId) === 'Tasks') {
-                            <div style="overflow-x:auto;">
-                              <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                                <thead>
-                                  <tr style="background:rgba(208,71,174,0.06);">
-                                    <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#374151;">Task</th>
-                                    <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#374151;">Category</th>
-                                    <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#374151;">Farmers</th>
-                                    <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#374151;">Location</th>
-                                    <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#374151;">Date</th>
-                                    <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#374151;">Observation/Recommendation</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  @for (task of filteredTasks(sub); track task.id) {
-                                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04);">
-                                      <td style="padding:9px 14px;font-weight:600;color:#1A1A1A;">{{ task.title }}</td>
-                                      <td style="padding:9px 14px;text-align:center;">
-                                        <span [style]="categoryBadge(task.category)">{{ task.category }}</span>
-                                      </td>
-                                      <td style="padding:9px 14px;text-align:center;font-weight:700;color:#D047AE;">{{ task.farmersVisited }}</td>
-                                      <td style="padding:9px 14px;color:#6B7280;">{{ task.location }}</td>
-                                      <td style="padding:9px 14px;text-align:center;color:#6B7280;">{{ task.completedDate | date:'MMM d, y' }}</td>
-                                      <td style="padding:9px 14px;color:#9CA3AF;font-size:12px;">{{ task.notes ?? '—' }}</td>
-                                    </tr>
-                                  }
-                                </tbody>
-                              </table>
-                            </div>
-                          }
-
-                          <!-- Training Tab -->
-                          @if (getActiveTab(sub.userId) === 'Training') {
-                            <div style="overflow-x:auto;">
-                              <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                                <thead>
-                                  <tr style="background:rgba(208,71,174,0.06);">
-                                    <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#374151;">Training Title</th>
-                                    <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#374151;">Category</th>
-                                    <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#374151;">Participants</th>
-                                    <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#374151;">Name of Community</th>
-                                    <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#374151;">Date</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  @for (ts of filteredTraining(sub); track ts.id) {
-                                    <tr style="border-bottom:1px solid rgba(0,0,0,0.04);">
-                                      <td style="padding:9px 14px;font-weight:600;color:#1A1A1A;">{{ ts.title }}</td>
-                                      <td style="padding:9px 14px;text-align:center;">
-                                        <span [style]="categoryBadge(ts.category)">{{ ts.category }}</span>
-                                      </td>
-                                      <td style="padding:9px 14px;text-align:center;font-weight:700;color:#D047AE;">{{ ts.participants }}</td>
-                                      <td style="padding:9px 14px;color:#6B7280;">{{ ts.location }}</td>
-                                      <td style="padding:9px 14px;text-align:center;color:#6B7280;">{{ ts.date | date:'MMM d, y' }}</td>
-                                    </tr>
-                                  }
-                                </tbody>
-                              </table>
-                            </div>
-                          }
-                        </div>
-                      </td>
-                    </tr>
-                  }
                 }
               </tbody>
             </table>
@@ -569,9 +469,6 @@ export class ReportsComponent implements OnInit {
   dateFrom = signal('');
   dateTo = signal('');
 
-  private activeTabs: Record<string, string> = {};
-  private expandCategoryFilters: Record<string, string> = {};
-
   role = this.authService.currentRole;
   roleLabel = computed(() => {
     const r = this.role(); return r ? ROLE_LABELS[r] : '';
@@ -607,43 +504,16 @@ export class ReportsComponent implements OnInit {
     });
   }
 
-  toggleExpand(sub: SubordinateReport): void {
-    sub.isExpanded = !sub.isExpanded;
-    if (sub.isExpanded && !this.activeTabs[sub.userId]) {
-      this.activeTabs[sub.userId] = 'Tasks';
-    }
-  }
 
-  setActiveTab(userId: string, tab: string): void {
-    this.activeTabs[userId] = tab;
-  }
+  router = inject(Router);
+  route = inject(ActivatedRoute);
 
-  getActiveTab(userId: string): string {
-    return this.activeTabs[userId] ?? 'Tasks';
+  goToDetails(sub: SubordinateReport): void {
+    this.router.navigate(['/dashboard/reports', sub.userId]);
   }
 
   getInitials(name: string): string {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-  }
-
-  getExpandCategoryFilter(userId: string): string {
-    return this.expandCategoryFilters[userId] ?? '';
-  }
-
-  setExpandCategoryFilter(userId: string, value: string): void {
-    this.expandCategoryFilters[userId] = value;
-  }
-
-  filteredTasks(sub: SubordinateReport): any[] {
-    const cat = this.getExpandCategoryFilter(sub.userId);
-    if (!cat) return sub.tasks;
-    return sub.tasks.filter(t => t.category === cat);
-  }
-
-  filteredTraining(sub: SubordinateReport): any[] {
-    const cat = this.getExpandCategoryFilter(sub.userId);
-    if (!cat) return sub.trainingSessions;
-    return sub.trainingSessions.filter(ts => ts.category === cat);
   }
 
   toggleDownloadMenu(): void {
@@ -701,17 +571,6 @@ export class ReportsComponent implements OnInit {
       GSP: 'padding:2px 8px;background:#EDE9FE;color:#7C3AED;border-radius:6px;font-size:11px;font-weight:700;',
     };
     return styles[cat] ?? '';
-  }
-
-  tabStyle(userId: string, tab: string): string {
-    const active = this.getActiveTab(userId) === tab;
-    return `
-      padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;
-      border:1.5px solid ${active ? '#E068C4' : '#E5E7EB'};
-      background:${active ? '#D047AE' : 'white'};
-      color:${active ? 'white' : '#6B7280'};
-      transition:all 0.2s;
-    `;
   }
 
   onActionSelect(event: Event, sub: SubordinateReport): void {
