@@ -113,6 +113,10 @@ export class DashboardService {
     );
   }
 
+  getReportDetails(reportId: string): Observable<ApiResult<any>> {
+    return this.api.get<ApiResult<any>>(`/api/Reports/${reportId}`);
+  }
+
   getReports(role: UserRole): Observable<DashboardSummary> {
     return this.api.get<ApiResult<{ items: DashboardApiReport[]; totalCount: number }>>(
       '/api/Reports?PageNumber=1&PageSize=100'
