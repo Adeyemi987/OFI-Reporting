@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject, HostListener } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +10,6 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
   selector: 'app-reports',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  host: { '(document:click)': 'onDocumentClick()' },
   template: `
     <div style="
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -107,43 +106,50 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
                   <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
                   </svg>
-                  Export Report
-                  <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" [style.transform]="showDownloadMenu() ? 'rotate(180deg)' : 'none'" style="transition:transform 0.2s;opacity:0.85;">
+                  Download Report
+                  <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="opacity:0.85;">
                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
                   </svg>
                 </button>
-
+                
+                <!-- Dropdown menu -->
                 @if (showDownloadMenu()) {
                   <div style="
-                    position:absolute;top:calc(100% + 6px);right:0;z-index:200;
-                    background:white;border-radius:14px;border:1.5px solid #F0B8E0;
-                    box-shadow:0 12px 40px rgba(208,71,174,0.18);
-                    padding:8px;min-width:220px;
-                    animation:popIn 0.15s cubic-bezier(0.34,1.56,0.64,1);
+                    position:absolute;top:calc(100% + 8px);right:0;z-index:100;
+                    background:white;border-radius:12px;overflow:hidden;
+                    box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid #E5E7EB;
+                    min-width:160px;
                   ">
-                    <div style="padding:6px 10px 4px;font-size:10px;font-weight:800;color:#C2389A;text-transform:uppercase;letter-spacing:0.8px;">Excel (.xlsx)</div>
-                    <button (click)="download('summary','excel')" class="dl-menu-item">
-                      <svg width="13" height="13" viewBox="0 0 20 20" fill="#16A34A"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.396 0 2.694.372 3.8 1.02A7.973 7.973 0 0114.5 14c1.255 0 2.443.29 3.5.804V4.804A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>
-                      Full Summary (all sheets)
+                    <button
+                      (click)="download('summary', 'excel')"
+                      style="
+                        display:block;width:100%;padding:12px 16px;text-align:left;
+                        background:none;border:none;color:#1A1A1A;font-size:13px;
+                        font-weight:600;cursor:pointer;transition:background 0.2s;
+                        border-bottom:1px solid #F3F4F6;
+                      "
+                      (mouseenter)="$any($event.target).style.background='#F9FAFB'"
+                      (mouseleave)="$any($event.target).style.background='none'"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" style="display:inline;margin-right:8px;vertical-align:middle;color:#16A34A;">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v2a1 1 0 001 1h6a1 1 0 001-1v-2zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3a2 2 0 01-2 2h-2z"/>
+                      </svg>
+                      Download as .xlsx
                     </button>
-                    <button (click)="download('farm-visits','excel')" class="dl-menu-item">
-                      <svg width="13" height="13" viewBox="0 0 20 20" fill="#D047AE"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
-                      Farm Visits
-                    </button>
-                    <button (click)="download('training','excel')" class="dl-menu-item">
-                      <svg width="13" height="13" viewBox="0 0 20 20" fill="#7C3AED"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/></svg>
-                      Training Sessions
-                    </button>
-
-                    <div style="height:1px;background:#F3F4F6;margin:6px 0;"></div>
-                    <div style="padding:6px 10px 4px;font-size:10px;font-weight:800;color:#C2389A;text-transform:uppercase;letter-spacing:0.8px;">CSV (.csv)</div>
-                    <button (click)="download('summary','csv')" class="dl-menu-item">
-                      <svg width="13" height="13" viewBox="0 0 20 20" fill="#16A34A"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.396 0 2.694.372 3.8 1.02A7.973 7.973 0 0114.5 14c1.255 0 2.443.29 3.5.804V4.804A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>
-                      Summary Overview
-                    </button>
-                    <button (click)="download('training','csv')" class="dl-menu-item">
-                      <svg width="13" height="13" viewBox="0 0 20 20" fill="#7C3AED"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/></svg>
-                      Training Sessions
+                    <button
+                      (click)="download('summary', 'csv')"
+                      style="
+                        display:block;width:100%;padding:12px 16px;text-align:left;
+                        background:none;border:none;color:#1A1A1A;font-size:13px;
+                        font-weight:600;cursor:pointer;transition:background 0.2s;
+                      "
+                      (mouseenter)="$any($event.target).style.background='#F9FAFB'"
+                      (mouseleave)="$any($event.target).style.background='none'"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" style="display:inline;margin-right:8px;vertical-align:middle;color:#0284C7;">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v2a1 1 0 001 1h6a1 1 0 001-1v-2zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3a2 2 0 01-2 2h-2z"/>
+                      </svg>
+                      Download as .csv
                     </button>
                   </div>
                 }
@@ -518,12 +524,6 @@ export class ReportsComponent implements OnInit {
 
   toggleDownloadMenu(): void {
     this.showDownloadMenu.update(v => !v);
-  }
-
-  onDocumentClick(): void {
-    if (this.showDownloadMenu()) {
-      this.showDownloadMenu.set(false);
-    }
   }
 
   download(type: DownloadOptions['type'], format: DownloadOptions['format']): void {
