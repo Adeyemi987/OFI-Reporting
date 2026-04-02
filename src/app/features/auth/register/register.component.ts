@@ -161,7 +161,8 @@ import { ToastService } from '../../../core/services/toast.service';
               }
             </div>
 
-            <!-- Supervisor dropdown (full width) -->
+            <!-- Supervisor dropdown (full width, hidden for CH) -->
+            @if (needsSupervisor()) {
             <div style="grid-column:1/-1;">
               <label style="display:block;font-size:12.5px;font-weight:600;color:#374151;margin-bottom:6px;">Supervisor <span style="color:#DC2626;">*</span></label>
               <div style="position:relative;">
@@ -203,6 +204,7 @@ import { ToastService } from '../../../core/services/toast.service';
                 <p style="margin:4px 0 0;font-size:11.5px;color:#EF4444;">Please select a supervisor.</p>
               }
             </div>
+            } <!-- end @if (needsSupervisor()) -->
 
             <!-- Password (full width) -->
             <div style="grid-column:1/-1;">
@@ -370,18 +372,18 @@ export class RegisterComponent {
     const role = this.selectedRole();
     this.supervisorId.set('');
     this.supervisors.set([]);
-    if (!role) return;
+    // CH has no supervisor — skip API call entirely
+    if (!role || role === 'CH') return;
     const roleEnum = RegisterComponent.ROLE_ENUM[role] ?? 6;
     const supervisorRoleEnum = Math.max(0, roleEnum - 1);
     this.supervisorsLoading.set(true);
-    this.http.get<{ success: boolean; data: { Items: { Id: string; FullName: string }[] } }>(
+    this.http.get<{ success: boolean; data: Record<string, unknown> }>(
       `${this.baseUrl}/api/Users`,
       { params: { Role: supervisorRoleEnum.toString(), PageNumber: '1', PageSize: '100' } }
     ).subscribe({
       next: (res) => {
-        this.supervisors.set(
-          (res?.data?.Items ?? []).map(s => ({ id: s.Id, fullName: s.FullName }))
-        );
+        const raw = (res?.data?.['Items'] ?? res?.data?.['items'] ?? []) as { Id?: string; id?: string; FullName?: string; fullName?: string }[];
+        this.supervisors.set(raw.map(s => ({ id: (s.Id ?? s.id ?? '') as string, fullName: (s.FullName ?? s.fullName ?? '') as string })));
         this.supervisorsLoading.set(false);
       },
       error: () => {
@@ -447,13 +449,15 @@ export class RegisterComponent {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim());
   }
 
+  needsSupervisor = computed(() => this.selectedRole() !== 'CH');
+
   completionPct = computed(() => {
     const checks = [
       this.isEmailValid(),
       this.fullName().trim().length >= 2,
       !!this.employeeId().trim(),
       !!this.selectedRole(),
-      !!this.supervisorId(),
+      ...(this.needsSupervisor() ? [!!this.supervisorId()] : []),
       this.pwValid() && !!this.confirmPassword() && this.confirmPassword() === this.password(),
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
@@ -472,7 +476,7 @@ export class RegisterComponent {
     this.fullName().trim().length >= 2 &&
     !!this.employeeId().trim() &&
     !!this.selectedRole() &&
-    !!this.supervisorId() &&
+    (!this.needsSupervisor() || !!this.supervisorId()) &&
     this.pwValid() &&
     !!this.confirmPassword() &&
     this.confirmPassword() === this.password()
@@ -495,7 +499,7 @@ export class RegisterComponent {
         email: this.email().trim(),
         password: this.password(),
         role: RegisterComponent.ROLE_ENUM[this.selectedRole()] ?? 6,
-        supervisorId: this.supervisorId().trim(),
+        supervisorId: this.needsSupervisor() ? this.supervisorId().trim() : null,
       }
     ).subscribe({
       next: (res) => {
