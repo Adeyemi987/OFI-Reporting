@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from './core/guards/auth.guard';
+import { AuthGuard, RoleGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -41,6 +41,8 @@ export const routes: Routes = [
       },
       {
         path: 'reports/:userId',
+        canActivate: [RoleGuard],
+        data: { roles: ['FC'] },
         loadComponent: () =>
           import('./features/reports/report-details.component').then(m => m.ReportDetailsComponent)
       },
@@ -53,8 +55,18 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () =>
           import('./features/settings/settings.component').then(m => m.SettingsComponent)
+      },
+      {
+        path: 'submit-report',
+        loadComponent: () =>
+          import('./features/reports/submit-weekly-report.component').then(m => m.SubmitWeeklyReportComponent)
       }
     ]
+  },
+  {
+    path: 'submit-report',
+    loadComponent: () =>
+      import('./features/reports/submit-weekly-report.component').then(m => m.SubmitWeeklyReportComponent)
   },
   {
     path: 'not-found',

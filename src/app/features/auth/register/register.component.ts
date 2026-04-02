@@ -374,12 +374,14 @@ export class RegisterComponent {
     const roleEnum = RegisterComponent.ROLE_ENUM[role] ?? 6;
     const supervisorRoleEnum = Math.max(0, roleEnum - 1);
     this.supervisorsLoading.set(true);
-    this.http.get<{ success: boolean; data: { items: { id: string; fullName: string }[] } }>(
+    this.http.get<{ success: boolean; data: { Items: { Id: string; FullName: string }[] } }>(
       `${this.baseUrl}/api/Users`,
       { params: { Role: supervisorRoleEnum.toString(), PageNumber: '1', PageSize: '100' } }
     ).subscribe({
       next: (res) => {
-        this.supervisors.set(res?.data?.items ?? []);
+        this.supervisors.set(
+          (res?.data?.Items ?? []).map(s => ({ id: s.Id, fullName: s.FullName }))
+        );
         this.supervisorsLoading.set(false);
       },
       error: () => {

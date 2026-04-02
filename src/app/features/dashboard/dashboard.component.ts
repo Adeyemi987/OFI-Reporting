@@ -48,9 +48,12 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
               {{ roleLabel() }} Dashboard
             </h1>
             <p style="margin:8px 0 0;color:rgba(255,255,255,0.7);font-size:14px;">
-              Aggregated reporting for {{ subordinateLabel() }} · Last updated {{ formattedDate() }}
+              Aggregated reporting for {{ subordinateLabel() }} · Last Login {{ formattedDate() }}
             </p>
           </div>
+
+          <!-- CTA Buttons -->
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;">
 
           <!-- View Detailed Reports -->
           <a routerLink="reports" style="
@@ -80,6 +83,8 @@ import { StatusLabelPipe, NumberShortPipe } from '../../shared/pipes/pipes';
               <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
             </svg>
           </a>
+
+          </div>
         </div>
       </div>
 
@@ -482,7 +487,7 @@ export class DashboardComponent implements OnInit {
     });
   });
 
-  readonly pageSize = 10;
+  readonly pageSize = 5;
   currentPage = signal(1);
   totalPages = computed(() => Math.max(1, Math.ceil(this.filteredSubordinates().length / this.pageSize)));
   pageNumbers = computed(() => Array.from({ length: this.totalPages() }, (_, i) => i + 1));

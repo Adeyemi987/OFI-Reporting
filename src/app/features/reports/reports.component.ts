@@ -32,7 +32,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
             <span style="color:rgba(255,255,255,0.7);font-size:13px;">{{ roleLabel() }}</span>
           </div>
           <h1 style="margin:0;font-size:28px;font-weight:900;color:white;letter-spacing:-0.5px;">Detailed Reports</h1>
-          <p style="margin:8px 0 0;color:rgba(255,255,255,0.7);font-size:14px;">Farm visit &amp; training details for {{ subordinateLabel() }} · Click any row to view details</p>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.7);font-size:14px;">Farm visit &amp; training details for {{ subordinateLabel() }}{{ canViewDetails() ? ' · Click any row to view details' : '' }}</p>
         </div>
       </div>
 
@@ -44,7 +44,8 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
         </div>
       } @else {
 
-        <!-- ── Direction Hint ───────────────────────────────────────── -->
+        <!-- ── Direction Hint (FC only) ─────────────────────────── -->
+        @if (canViewDetails()) {
         <div style="
           display:flex;align-items:center;gap:14px;
           padding:14px 20px;margin-bottom:20px;
@@ -66,6 +67,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
             <div style="font-size:12px;color:#C2389A;margin-top:2px;">Click on any record below to navigate to the details page and view their full <strong>Tasks</strong> and <strong>Training</strong> information.</div>
           </div>
         </div>
+        }
 
         <!-- ── Subordinate Detail Table ──────────────────────────────── -->
         <div style="
@@ -79,7 +81,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
           ">
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:800;color:#1A1A1A;">{{ subordinateLabel() }} Details</h2>
-              <p style="margin:4px 0 0;font-size:12px;color:#9CA3AF;">{{ filteredSubordinates().length }} records · Click any row to view details</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#9CA3AF;">{{ filteredSubordinates().length }} records{{ canViewDetails() ? ' · Click any row to view details' : '' }}</p>
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <!-- Approved badge -->
@@ -516,6 +518,7 @@ export class ReportsComponent implements OnInit {
   subordinateLabel = computed(() => {
     const r = this.role(); return r ? ROLE_SUBORDINATE[r] : '';
   });
+  canViewDetails = computed(() => this.role() === 'FC');
 
   filteredSubordinates = computed(() => {
     const s = this.summary();
@@ -570,6 +573,7 @@ export class ReportsComponent implements OnInit {
   route = inject(ActivatedRoute);
 
   goToDetails(sub: SubordinateReport): void {
+    if (!this.canViewDetails()) return;
     this.router.navigate(['/dashboard/reports', sub.userId]);
   }
 
@@ -596,8 +600,9 @@ export class ReportsComponent implements OnInit {
   rowStyle(sub: SubordinateReport, i: number): string {
     const base = sub.isExpanded ? '#FDF2FB' : (i % 2 === 0 ? 'white' : '#FAFAFA');
     const isPending = sub.status !== 'approved' && sub.status !== 'rejected';
+    const cursor = this.canViewDetails() ? 'pointer' : 'default';
     return `
-      background:${base};cursor:pointer;
+      background:${base};cursor:${cursor};
       border-bottom:1px solid #F3F4F6;
       transition:background 0.15s;
       ${isPending ? 'border-left:3px solid #F59E0B;' : ''}

@@ -195,6 +195,11 @@ import { AuthService } from '../../../core/services/auth.service';
           <a routerLink="/auth/register" style="color:#821E75;font-weight:700;text-decoration:none;margin-left:4px;">Create Account</a>
         </p>
 
+        <p style="text-align:center;margin-top:12px;font-size:13px;color:#6B7280;">
+          Want to submit a report?
+          <a routerLink="/submit-report" style="color:#821E75;font-weight:700;text-decoration:none;margin-left:4px;">Submit Weekly Report</a>
+        </p>
+
       </div>
 
       <style>
