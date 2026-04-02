@@ -177,7 +177,7 @@ import { SubordinateReport } from '../../core/models';
                           <td style="padding: 12px 16px; font-weight: 600;">{{ task.title }}</td>
                           <td style="padding: 12px 16px; color: #6B7280; font-size: 12px;">{{ task.description ?? '—' }}</td>
                           <td style="padding: 12px 16px; text-align: center;">
-                            <span [style]="getCategoryStyle(task.category)">{{ task.category }}</span>
+                            <span [style]="getCategoryStyle(task.category)">{{ mapCategory(task.category) }}</span>
                           </td>
                           <td style="padding: 12px 16px; text-align: center;">
                             @if (task.isCompleted) {
@@ -218,6 +218,7 @@ import { SubordinateReport } from '../../core/models';
                       <tr style="background: #F8FAFC;">
                         <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Title</th>
                         <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Location</th>
+                        <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Category</th>
                         <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Session Date</th>
                         <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Attendees</th>
                       </tr>
@@ -227,6 +228,9 @@ import { SubordinateReport } from '../../core/models';
                         <tr style="border-bottom: 1px solid #F3F4F6;">
                           <td style="padding: 12px 16px; font-weight: 600;">{{ training.title }}</td>
                           <td style="padding: 12px 16px; color: #6B7280;">{{ training.location }}</td>
+                          <td style="padding: 12px 16px; text-align: center;">
+                            <span [style]="getCategoryStyle(training.category)">{{ mapCategory(training.category) }}</span>
+                          </td>
                           <td style="padding: 12px 16px; text-align: center; color: #6B7280; font-size: 12px;">
                             {{ training.sessionDate ? (training.sessionDate | date:'MMM d, y') : '—' }}
                           </td>
@@ -367,13 +371,25 @@ export class ReportDetailsComponent implements OnInit {
       .toUpperCase();
   }
 
-  getCategoryStyle(category: string): Record<string, string> {
+  private readonly CATEGORY_MAP: Record<number | string, string> = {
+    0: 'GAP', 1: 'GEP', 2: 'GSP',
+    GAP: 'GAP', GEP: 'GEP', GSP: 'GSP'
+  };
+
+  mapCategory(value: number | string | null | undefined): string {
+    if (value === null || value === undefined || value === '') return 'Unknown';
+    return this.CATEGORY_MAP[value] ?? 'Unknown';
+  }
+
+  getCategoryStyle(category: number | string | null | undefined): Record<string, string> {
+    const label = this.mapCategory(category);
     const styles: Record<string, Record<string, string>> = {
       GAP: { 'background': '#DCFCE7', 'color': '#16A34A', 'padding': '4px 10px', 'border-radius': '6px', 'font-weight': '600', 'font-size': '11px', 'display': 'inline-block' },
       GEP: { 'background': '#E0F2FE', 'color': '#0284C7', 'padding': '4px 10px', 'border-radius': '6px', 'font-weight': '600', 'font-size': '11px', 'display': 'inline-block' },
-      GSP: { 'background': '#EDE9FE', 'color': '#7C3AED', 'padding': '4px 10px', 'border-radius': '6px', 'font-weight': '600', 'font-size': '11px', 'display': 'inline-block' }
+      GSP: { 'background': '#EDE9FE', 'color': '#7C3AED', 'padding': '4px 10px', 'border-radius': '6px', 'font-weight': '600', 'font-size': '11px', 'display': 'inline-block' },
+      Unknown: { 'background': '#F3F4F6', 'color': '#6B7280', 'padding': '4px 10px', 'border-radius': '6px', 'font-weight': '600', 'font-size': '11px', 'display': 'inline-block' }
     };
-    return styles[category] || styles['GAP'];
+    return styles[label] ?? styles['Unknown'];
   }
 
   goBack(): void {
