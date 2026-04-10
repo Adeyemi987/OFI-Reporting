@@ -13,7 +13,7 @@ import { ROLE_LABELS, UserRole } from '../../core/models';
     <aside [style]="sidebarStyle">
       <!-- Logo -->
       <div style="padding: 0 0 32px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; display: flex; align-items: center;">
-        <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:88px;height:40px;object-fit:contain;" />
+        <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:88px;height:40px;object-fit:contain;mix-blend-mode:multiply;" />
       </div>
 
       <!-- Navigation -->

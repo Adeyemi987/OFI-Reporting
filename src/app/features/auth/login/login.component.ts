@@ -57,15 +57,8 @@ import { AuthService } from '../../../core/services/auth.service';
       ">
         <!-- Corvay Logo -->
         <div style="text-align:center;margin-bottom:36px;">
-          <div style="
-            display:inline-flex;align-items:center;justify-content:center;
-            padding:18px 28px;
-            background:linear-gradient(135deg,#6B1561 0%,#821E75 50%,#9A248A 100%);
-            border-radius:22px;
-            box-shadow:0 10px 40px rgba(130,30,117,0.45),inset 0 1px 0 rgba(255,255,255,0.15);
-            margin-bottom:20px;
-          ">
-            <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:130px;height:58px;object-fit:contain;" />
+          <div style="margin-bottom:20px;">
+            <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:130px;height:58px;object-fit:contain;mix-blend-mode:multiply;" />
           </div>
           <h1 style="margin:0;font-size:25px;font-weight:800;color:#1A1A1A;letter-spacing:-0.4px;">Welcome back</h1>
           <p style="margin:7px 0 0;color:#6B7280;font-size:13.5px;">Sign in to Corvay Reporting System</p>
