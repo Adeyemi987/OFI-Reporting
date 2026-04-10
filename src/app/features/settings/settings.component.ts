@@ -223,7 +223,7 @@ import { ROLE_LABELS } from '../../core/models';
                 <path d="M10 26 L18 10 L26 26 M13 21 H23" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h2 style="margin:0;font-size:24px;font-weight:900;color:var(--text);">OFI Reporting</h2>
+            <h2 style="margin:0;font-size:24px;font-weight:900;color:var(--text);">Corvay Reporting</h2>
             <p style="margin:6px 0 0;font-size:14px;color:var(--text-secondary);">Organizational Reporting System</p>
           </div>
           <div style="display:flex;flex-direction:column;gap:12px;">
@@ -289,7 +289,7 @@ export class SettingsComponent {
   ];
 
   accentColors = [
-    { name: 'OFI Pink', value: '#D047AE', shadow: 'rgba(208,71,174,0.3)' },
+    { name: 'Corvay Pink', value: '#D047AE', shadow: 'rgba(208,71,174,0.3)' },
     { name: 'Emerald', value: '#059669', shadow: 'rgba(5,150,105,0.3)' },
     { name: 'Forest Green', value: '#2F7D32', shadow: 'rgba(47,125,50,0.3)' },
     { name: 'Sky Blue', value: '#0284C7', shadow: 'rgba(2,132,199,0.3)' },

@@ -14,7 +14,7 @@ export const authInterceptor: HttpInterceptorFn = (
       setHeaders: {
         Authorization: token,
         'X-App-Version': '1.0.0',
-        'X-Client': 'OFI-Reporting-Web'
+        'X-Client': 'Corvay-Reporting-Web'
       }
     });
     return next(authReq);

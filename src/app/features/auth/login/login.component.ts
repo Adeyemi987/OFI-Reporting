@@ -55,7 +55,7 @@ import { AuthService } from '../../../core/services/auth.service';
         position: relative; z-index: 1;
         animation: slideUp 0.65s cubic-bezier(0.22,1,0.36,1);
       ">
-        <!-- OFI Logo -->
+        <!-- Corvay Logo -->
         <div style="text-align:center;margin-bottom:36px;">
           <div style="
             display:inline-flex;align-items:center;justify-content:center;
@@ -65,23 +65,10 @@ import { AuthService } from '../../../core/services/auth.service';
             box-shadow:0 10px 40px rgba(130,30,117,0.45),inset 0 1px 0 rgba(255,255,255,0.15);
             margin-bottom:20px;
           ">
-            <svg width="130" height="58" viewBox="0 0 100 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- o ring with person -->
-              <circle cx="20" cy="19" r="17" stroke="white" stroke-width="3.5" fill="none"/>
-              <circle cx="20" cy="13.5" r="5.8" fill="white"/>
-              <path d="M7 31 C7 24 33 24 33 31" fill="white"/>
-              <!-- f -->
-              <path d="M47.5 7 C48 3.5 50.5 1.5 54.5 1.5 C56.5 1.5 57.8 2.2 57.8 2.2 L57.8 5.5 C56.6 5 55.3 4.4 54 4.4 C51.6 4.4 50.8 5.8 50.8 7.5 L50.8 12.8 L57 12.8 L57 16 L50.8 16 L50.8 38.5 L47.5 38.5 Z" fill="white"/>
-              <!-- i dot -->
-              <circle cx="66" cy="5" r="3.5" fill="white"/>
-              <!-- i body -->
-              <rect x="62.5" y="12.5" width="7" height="26" rx="0.5" fill="white"/>
-              <!-- make it real -->
-              <text x="1" y="46" font-family="Georgia, 'Times New Roman', Times, serif" font-style="italic" font-size="11" fill="rgba(255,255,255,0.88)" letter-spacing="0.9">make it real</text>
-            </svg>
+            <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:130px;height:58px;object-fit:contain;" />
           </div>
           <h1 style="margin:0;font-size:25px;font-weight:800;color:#1A1A1A;letter-spacing:-0.4px;">Welcome back</h1>
-          <p style="margin:7px 0 0;color:#6B7280;font-size:13.5px;">Sign in to OFI Reporting System</p>
+          <p style="margin:7px 0 0;color:#6B7280;font-size:13.5px;">Sign in to Corvay Reporting System</p>
         </div>
 
         <!-- Error alert -->

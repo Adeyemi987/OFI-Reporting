@@ -12,17 +12,23 @@ import { ROLE_LABELS, UserRole } from '../../core/models';
   template: `
     <aside [style]="sidebarStyle">
       <!-- Logo -->
-      <div style="padding: 0 0 32px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; display: flex; align-items: center;">
-        <!-- OFI full logo -->
-        <svg width="88" height="40" viewBox="0 0 100 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="20" cy="19" r="17" stroke="white" stroke-width="3.5" fill="none"/>
-          <circle cx="20" cy="13.5" r="5.8" fill="white"/>
-          <path d="M7 31 C7 24 33 24 33 31" fill="white"/>
-          <path d="M47.5 7 C48 3.5 50.5 1.5 54.5 1.5 C56.5 1.5 57.8 2.2 57.8 2.2 L57.8 5.5 C56.6 5 55.3 4.4 54 4.4 C51.6 4.4 50.8 5.8 50.8 7.5 L50.8 12.8 L57 12.8 L57 16 L50.8 16 L50.8 38.5 L47.5 38.5 Z" fill="white"/>
-          <circle cx="66" cy="5" r="3.5" fill="white"/>
-          <rect x="62.5" y="12.5" width="7" height="26" rx="0.5" fill="white"/>
-          <text x="1" y="46" font-family="Georgia, 'Times New Roman', Times, serif" font-style="italic" font-size="11" fill="rgba(255,255,255,0.82)" letter-spacing="0.9">make it real</text>
-        </svg>
+      <div style="padding: 0 0 32px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="
+            width: 42px; height: 42px; flex-shrink: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1));
+            border-radius: 12px; display: flex; align-items:center; justify-content:center;
+            border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+          ">
+            <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:26px;height:26px;object-fit:contain;" />
+          </div>
+          @if (expanded) {
+            <div style="animation: fadeIn 0.2s ease-out;">
+              <!-- Corvay full logo when sidebar is expanded -->
+              <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:88px;height:40px;object-fit:contain;" />
+            </div>
+          }
+        </div>
       </div>
 
       <!-- Navigation -->

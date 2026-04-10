@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://localhost:7228',
-  appName: 'OFI Reporting',
+  apiUrl: 'https://ofi-reporting-machine-api.onrender.com',
+  appName: 'Corvay Reporting',
   version: '1.0.0'
 };

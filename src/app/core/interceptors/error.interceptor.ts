@@ -1,8 +1,10 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { ToastService } from '../services/toast.service';
+import { AuthService } from '../services/auth.service';
 
 function getFriendlyError(err: HttpErrorResponse): { title: string; message: string } | null {
   switch (err.status) {
@@ -31,12 +33,19 @@ function getFriendlyError(err: HttpErrorResponse): { title: string; message: str
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const toastService = inject(ToastService);
+  const authService = inject(AuthService);
+  const router = inject(Router);
   return next(req).pipe(
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse) {
-        const friendly = getFriendlyError(err);
-        if (friendly) {
-          toastService.show(friendly.title, friendly.message, 'error');
+        if (err.status === 401) {
+          authService.logout();
+          router.navigate(['/auth/login']);
+        } else {
+          const friendly = getFriendlyError(err);
+          if (friendly) {
+            toastService.show(friendly.title, friendly.message, 'error');
+          }
         }
       }
       return throwError(() => err);
