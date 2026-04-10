@@ -12,23 +12,8 @@ import { ROLE_LABELS, UserRole } from '../../core/models';
   template: `
     <aside [style]="sidebarStyle">
       <!-- Logo -->
-      <div style="padding: 0 0 32px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="
-            width: 42px; height: 42px; flex-shrink: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1));
-            border-radius: 12px; display: flex; align-items:center; justify-content:center;
-            border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-          ">
-            <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:26px;height:26px;object-fit:contain;" />
-          </div>
-          @if (expanded) {
-            <div style="animation: fadeIn 0.2s ease-out;">
-              <!-- Corvay full logo when sidebar is expanded -->
-              <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:88px;height:40px;object-fit:contain;" />
-            </div>
-          }
-        </div>
+      <div style="padding: 0 0 32px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; display: flex; align-items: center;">
+        <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:88px;height:40px;object-fit:contain;" />
       </div>
 
       <!-- Navigation -->
