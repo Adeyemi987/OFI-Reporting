@@ -13,24 +13,8 @@ import { ROLE_LABELS, UserRole } from '../../core/models';
     <aside [style]="sidebarStyle">
       <!-- Logo -->
       <div style="padding: 0 0 32px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; display: flex; align-items: center;">
-        <!-- OFI full logo -->
-        <div style="
-          display:inline-flex;align-items:center;justify-content:center;
-          padding:10px 14px;
-          background:linear-gradient(135deg,#6B1561 0%,#821E75 50%,#9A248A 100%);
-          border-radius:16px;
-          box-shadow:0 6px 24px rgba(130,30,117,0.5),inset 0 1px 0 rgba(255,255,255,0.18);
-        ">
-          <svg width="88" height="40" viewBox="0 0 100 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="19" r="17" stroke="white" stroke-width="3.5" fill="none"/>
-            <circle cx="20" cy="13.5" r="5.8" fill="white"/>
-            <path d="M7 31 C7 24 33 24 33 31" fill="white"/>
-            <path d="M47.5 7 C48 3.5 50.5 1.5 54.5 1.5 C56.5 1.5 57.8 2.2 57.8 2.2 L57.8 5.5 C56.6 5 55.3 4.4 54 4.4 C51.6 4.4 50.8 5.8 50.8 7.5 L50.8 12.8 L57 12.8 L57 16 L50.8 16 L50.8 38.5 L47.5 38.5 Z" fill="white"/>
-            <circle cx="66" cy="5" r="3.5" fill="white"/>
-            <rect x="62.5" y="12.5" width="7" height="26" rx="0.5" fill="white"/>
-            <text x="1" y="46" font-family="Georgia, 'Times New Roman', Times, serif" font-style="italic" font-size="11" fill="rgba(255,255,255,0.88)" letter-spacing="0.9">make it real</text>
-          </svg>
-        </div>
+        <!-- Corvay Logo -->
+        <img src="https://corvaytechnologies.com/corvay-logo.jpg" alt="Corvay Technologies" style="width:220px;height:100px;object-fit:contain;mix-blend-mode:screen;filter:brightness(1.15) contrast(1.4);margin-right:auto;margin-left:-24px;" />
       </div>
 
       <!-- Navigation -->
