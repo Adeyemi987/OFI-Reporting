@@ -24,6 +24,35 @@ export const routes: Routes = [
     ]
   },
   {
+    path: 'fo',
+    canActivate: [AuthGuard],
+    loadComponent: () =>
+      import('./shared/layout/layout.component').then(m => m.LayoutComponent),
+    children: [
+      {
+        path: 'fo-dashboard',
+        loadComponent: () =>
+          import('./features/fo/fo-dashboard/fo-dashboard.component').then(m => m.FODashboardComponent)
+      },
+      {
+        path: 'create-report',
+        loadComponent: () =>
+          import('./features/fo/create-report/create-report.component').then(m => m.CreateReportComponent)
+      },
+      {
+        path: 'my-reports',
+        loadComponent: () =>
+          import('./features/fo/my-reports/my-reports.component').then(m => m.MyReportsComponent)
+      },
+      {
+        path: 'report-details/:id',
+        loadComponent: () =>
+          import('./features/fo/report-detail/report-detail.component').then(m => m.ReportDetailComponent)
+      },
+      { path: '', redirectTo: 'fo-dashboard', pathMatch: 'full' }
+    ]
+  },
+  {
     path: 'dashboard',
     canActivate: [AuthGuard],
     loadComponent: () =>

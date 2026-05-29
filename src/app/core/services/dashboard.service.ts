@@ -101,6 +101,14 @@ export class DashboardService {
   }
 
   getDashboard(role: UserRole): Observable<DashboardSummary> {
+    // FO role uses the FO-specific Dashboard API
+    if (role === 'FO') {
+      return this.api.get<ApiResult<DashboardApiData>>('/api/Dashboard/fo').pipe(
+        map(dashRes => this.mapToDashboardSummary(dashRes.data, role, 0))
+      );
+    }
+
+    // Other roles fetch dashboard + subordinates count
     return forkJoin([
       this.api.get<ApiResult<DashboardApiData>>('/api/Dashboard'),
       this.api.get<ApiResult<SubordinatesApiData>>(
@@ -120,6 +128,12 @@ export class DashboardService {
   }
 
   getReports(role: UserRole): Observable<DashboardSummary> {
+    // FO role should use Dashboard API, not Reports API
+    if (role === 'FO') {
+      return this.getDashboard(role);
+    }
+
+    // Other roles use Reports API with pagination
     return this.api.get<ApiResult<{ items: DashboardApiReport[]; totalCount: number }>>(
       '/api/Reports?PageNumber=1&PageSize=100'
     ).pipe(

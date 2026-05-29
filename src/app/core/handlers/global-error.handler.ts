@@ -32,7 +32,25 @@ export class GlobalErrorHandler implements ErrorHandler {
       return;
     }
 
+    // Log error but don't navigate to error page for non-critical errors
     console.error('[Unhandled Error]', error);
+
+    // Only navigate to error page for critical errors
+    const isCritical = message.includes('Cannot match any routes') || 
+                       message.includes('NullInjectorError') ||
+                       message.includes('Provider not found');
+    
+    if (!isCritical) {
+      // Show toast for non-critical errors
+      try {
+        const toastService = this.injector.get(ToastService);
+        toastService.show('Error', 'An error occurred. Please try again.', 'error');
+      } catch {
+        // If toast service fails, just log
+        console.error('Could not show error toast');
+      }
+      return;
+    }
 
     // For severe runtime errors navigate to the error page
     this.zone.run(() => {

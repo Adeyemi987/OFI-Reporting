@@ -1,0 +1,346 @@
+<div class="create-report-container">
+  <!-- Draft Banner -->
+  @if (hasDraft()) {
+    <div class="draft-banner">
+      <div class="draft-content">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+        </svg>
+        <span>You have an unsaved draft from a previous session</span>
+      </div>
+      <div class="draft-actions">
+        <button type="button" class="btn-load-draft" (click)="loadDraft()">Load Draft</button>
+        <button type="button" class="btn-discard-draft" (click)="discardDraft()">Discard</button>
+      </div>
+    </div>
+  }
+
+  <div class="form-card">
+    <div class="form-header">
+      <h1>Create Weekly Report</h1>
+      <div class="step-indicator">
+        <div class="step" [class.active]="currentStep() >= 1" [class.completed]="currentStep() > 1">
+          <div class="step-number">1</div>
+          <div class="step-label">Basic Info</div>
+        </div>
+        <div class="step-line" [class.active]="currentStep() > 1"></div>
+        <div class="step" [class.active]="currentStep() >= 2" [class.completed]="currentStep() > 2">
+          <div class="step-number">2</div>
+          <div class="step-label">Farm Visits</div>
+        </div>
+        <div class="step-line" [class.active]="currentStep() > 2"></div>
+        <div class="step" [class.active]="currentStep() >= 3" [class.completed]="currentStep() > 3">
+          <div class="step-number">3</div>
+          <div class="step-label">Training & Tasks</div>
+        </div>
+        <div class="step-line" [class.active]="currentStep() > 3"></div>
+        <div class="step" [class.active]="currentStep() >= 4">
+          <div class="step-number">4</div>
+          <div class="step-label">Evidence</div>
+        </div>
+      </div>
+    </div>
+
+    <form [formGroup]="reportForm" (ngSubmit)="onSubmit()">
+      <!-- Step 1: Basic Information -->
+      @if (currentStep() === 1) {
+        <div class="form-step">
+          <h2>Basic Information</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Week Number <span class="required">*</span></label>
+              <input type="number" formControlName="weekNumber" min="1" max="53" class="form-control">
+              @if (reportForm.get('weekNumber')?.invalid && reportForm.get('weekNumber')?.touched) {
+                <span class="error-text">Week number must be between 1 and 53</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label>Year <span class="required">*</span></label>
+              <input type="number" formControlName="year" min="2020" class="form-control">
+              @if (reportForm.get('year')?.invalid && reportForm.get('year')?.touched) {
+                <span class="error-text">Valid year required</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label>Week Start Date <span class="required">*</span></label>
+              <input type="date" formControlName="weekStartDate" class="form-control">
+              @if (reportForm.get('weekStartDate')?.invalid && reportForm.get('weekStartDate')?.touched) {
+                <span class="error-text">Start date is required</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label>Week End Date <span class="required">*</span></label>
+              <input type="date" formControlName="weekEndDate" class="form-control">
+              @if (reportForm.get('weekEndDate')?.invalid && reportForm.get('weekEndDate')?.touched) {
+                <span class="error-text">End date is required</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Challenges <span class="required">*</span></label>
+            <textarea formControlName="challenges" rows="4" class="form-control" placeholder="Describe challenges faced during the week"></textarea>
+            @if (reportForm.get('challenges')?.invalid && reportForm.get('challenges')?.touched) {
+              <span class="error-text">Challenges description is required</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Common Findings <span class="required">*</span></label>
+            <textarea formControlName="commonFindings" rows="4" class="form-control" placeholder="Describe common findings across visits"></textarea>
+            @if (reportForm.get('commonFindings')?.invalid && reportForm.get('commonFindings')?.touched) {
+              <span class="error-text">Common findings are required</span>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Step 2: Farm Visits -->
+      @if (currentStep() === 2) {
+        <div class="form-step">
+          <div class="step-header">
+            <h2>Farm Visits</h2>
+            <button type="button" class="btn-add" (click)="addFarmVisit()">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+              </svg>
+              Add Farm Visit
+            </button>
+          </div>
+
+          @if (farmVisits.length === 0) {
+            <div class="empty-state">
+              <p>No farm visits added yet. Click "Add Farm Visit" to begin.</p>
+            </div>
+          }
+
+          <div formArrayName="farmVisits" class="nested-array">
+            @for (visit of farmVisits.controls; track $index) {
+              <div [formGroupName]="$index" class="nested-item">
+                <div class="nested-header">
+                  <h3>Farm Visit #{{ $index + 1 }}</h3>
+                  <button type="button" class="btn-remove" (click)="removeFarmVisit($index)">Remove</button>
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Farmer ID <span class="required">*</span></label>
+                    <input type="text" formControlName="farmerId" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label>Farmer Name <span class="required">*</span></label>
+                    <input type="text" formControlName="farmerName" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label>Visit Date <span class="required">*</span></label>
+                    <input type="date" formControlName="visitDate" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label>Location <span class="required">*</span></label>
+                    <input type="text" formControlName="location" class="form-control">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Notes <span class="required">*</span></label>
+                  <textarea formControlName="notes" rows="3" class="form-control"></textarea>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Step 3: Training Sessions & Tasks -->
+      @if (currentStep() === 3) {
+        <div class="form-step">
+          <div class="step-header">
+            <h2>Training Sessions</h2>
+            <button type="button" class="btn-add" (click)="addTrainingSession()">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+              </svg>
+              Add Training Session
+            </button>
+          </div>
+
+          <div formArrayName="trainingSessions" class="nested-array">
+            @for (session of trainingSessions.controls; track $index) {
+              <div [formGroupName]="$index" class="nested-item">
+                <div class="nested-header">
+                  <h3>Training Session #{{ $index + 1 }}</h3>
+                  <button type="button" class="btn-remove" (click)="removeTrainingSession($index)">Remove</button>
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Title <span class="required">*</span></label>
+                    <input type="text" formControlName="title" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label>Location <span class="required">*</span></label>
+                    <input type="text" formControlName="location" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label>Session Date <span class="required">*</span></label>
+                    <input type="date" formControlName="sessionDate" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label>Category <span class="required">*</span></label>
+                    <select formControlName="category" class="form-control">
+                      <option [value]="null">Select category</option>
+                      @for (cat of categories; track cat.value) {
+                        <option [value]="cat.value">{{ cat.label }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+
+                <div class="attendances-section">
+                  <div class="subsection-header">
+                    <h4>Attendances</h4>
+                    <button type="button" class="btn-add-small" (click)="addAttendance($index)">+ Add Attendee</button>
+                  </div>
+                  <div formArrayName="attendances" class="attendances-list">
+                    @for (attendance of getAttendances($index).controls; track aIdx; let aIdx = $index) {
+                      <div [formGroupName]="aIdx" class="attendance-item">
+                        <input type="text" formControlName="attendeeName" placeholder="Attendee Name" class="form-control">
+                        <input type="text" formControlName="attendeeId" placeholder="Attendee ID" class="form-control">
+                        <button type="button" class="btn-icon-remove" (click)="removeAttendance($index, aIdx)">×</button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="step-header" style="margin-top: 2rem;">
+            <h2>Task Records</h2>
+            <button type="button" class="btn-add" (click)="addTaskRecord()">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+              </svg>
+              Add Task
+            </button>
+          </div>
+
+          <div formArrayName="taskRecords" class="nested-array">
+            @for (task of taskRecords.controls; track $index) {
+              <div [formGroupName]="$index" class="nested-item">
+                <div class="nested-header">
+                  <h3>Task #{{ $index + 1 }}</h3>
+                  <button type="button" class="btn-remove" (click)="removeTaskRecord($index)">Remove</button>
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Title <span class="required">*</span></label>
+                    <input type="text" formControlName="title" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label>Category <span class="required">*</span></label>
+                    <select formControlName="category" class="form-control">
+                      <option [value]="null">Select category</option>
+                      @for (cat of categories; track cat.value) {
+                        <option [value]="cat.value">{{ cat.label }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Description <span class="required">*</span></label>
+                  <textarea formControlName="description" rows="3" class="form-control"></textarea>
+                </div>
+                <div class="form-group checkbox-group">
+                  <label>
+                    <input type="checkbox" formControlName="isCompleted" (change)="onTaskCompletedChange($index)">
+                    <span>Task Completed</span>
+                  </label>
+                </div>
+                @if (task.get('isCompleted')?.value) {
+                  <div class="form-group">
+                    <label>Completed Date <span class="required">*</span></label>
+                    <input type="date" formControlName="completedDate" class="form-control">
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Step 4: Evidence Upload -->
+      @if (currentStep() === 4) {
+        <div class="form-step">
+          <h2>Evidence Upload</h2>
+          
+          <div class="form-group">
+            <label>Evidence Type</label>
+            <input type="text" formControlName="evidenceType" class="form-control" readonly>
+          </div>
+
+          <div class="form-group">
+            <label>Upload Evidence File <span class="required">*</span></label>
+            <div class="file-upload">
+              <input type="file" (change)="onFileSelected($event)" accept="image/*" id="fileInput" class="file-input">
+              <label for="fileInput" class="file-label">
+                <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                </svg>
+                <span>{{ selectedFile() ? selectedFile()!.name : 'Choose file' }}</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="geolocation-section">
+            <h3>Geolocation (Required for Geotagged Photo)</h3>
+            @if (!geoLocation()) {
+              <button type="button" class="btn-geo" (click)="captureGeolocation()" [disabled]="geoLoading()">
+                @if (geoLoading()) {
+                  <span class="spinner-small"></span>
+                  Capturing location...
+                } @else {
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                  </svg>
+                  Capture Location
+                }
+              </button>
+            } @else {
+              <div class="geo-info">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                  <strong>Location Captured</strong>
+                  <p>Lat: {{ geoLocation()!.latitude.toFixed(6) }}, Long: {{ geoLocation()!.longitude.toFixed(6) }}</p>
+                  <p class="accuracy">Accuracy: {{ geoLocation()!.accuracy.toFixed(2) }}m</p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Navigation Buttons -->
+      <div class="form-actions">
+        @if (currentStep() > 1) {
+          <button type="button" class="btn-secondary" (click)="prevStep()">Previous</button>
+        }
+        @if (currentStep() < 4) {
+          <button type="button" class="btn-primary" (click)="nextStep()" [disabled]="!isStepValid(currentStep())">Next</button>
+        }
+        @if (currentStep() === 4) {
+          <button type="submit" class="btn-submit" [disabled]="!canSubmit()">
+            @if (submitting()) {
+              <span class="spinner-small"></span>
+              Submitting...
+            } @else {
+              Submit Report
+            }
+          </button>
+        }
+      </div>
+    </form>
+  </div>
+</div>

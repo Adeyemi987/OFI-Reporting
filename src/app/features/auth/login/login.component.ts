@@ -211,9 +211,14 @@ export class LoginComponent {
     this.loading.set(true);
     this.errorMessage.set('');
     this.authService.login({ email: this.email, password: this.password }).subscribe({
-      next: () => {
+      next: (response) => {
         this.loading.set(false);
-        this.router.navigate(['/dashboard']);
+        const userRole = response.user.role;
+        if (userRole === 'FO') {
+          this.router.navigate(['/fo/fo-dashboard']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: (err) => {
         this.loading.set(false);
