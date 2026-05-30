@@ -2,7 +2,7 @@ services:
   - type: web
     name: ofi-reporting
     env: static
-    buildCommand: npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist/ofi-reporting/browser
     envVars:
       - key: NODE_VERSION
