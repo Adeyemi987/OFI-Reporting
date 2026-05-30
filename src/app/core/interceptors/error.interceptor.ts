@@ -5,6 +5,7 @@ import { catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { ToastService } from '../services/toast.service';
 import { AuthService } from '../services/auth.service';
+import { SKIP_ERROR_TOAST } from '../tokens';
 
 function getFriendlyError(err: HttpErrorResponse): { title: string; message: string } | null {
   switch (err.status) {
@@ -41,7 +42,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         if (err.status === 401) {
           authService.logout();
           router.navigate(['/auth/login']);
-        } else {
+        } else if (!req.context.get(SKIP_ERROR_TOAST)) {
           const friendly = getFriendlyError(err);
           if (friendly) {
             toastService.show(friendly.title, friendly.message, 'error');

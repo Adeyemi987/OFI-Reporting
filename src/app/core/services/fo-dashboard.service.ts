@@ -26,7 +26,13 @@ export class FODashboardService {
           uniqueFarmersReached: data?.uniqueFarmersReached ?? 0,
           totalTrainingSessions: data?.totalTrainingSessions ?? 0,
           totalTrainingAttendees: data?.totalTrainingAttendees ?? 0,
-          recentReports: Array.isArray(data?.recentReports) ? data.recentReports : []
+          recentReports: (Array.isArray(data?.recentReports) ? data.recentReports : []).map((r: any) => ({
+            ...r,
+            status: r.status ?? r.Status ?? 'Unknown',
+            gapCount: r.gapTaskCount ?? r.gapCount ?? 0,
+            gepCount: r.gepTaskCount ?? r.gepCount ?? 0,
+            gspCount: r.gspTaskCount ?? r.gspCount ?? 0,
+          }))
         };
       }),
       catchError((error) => {

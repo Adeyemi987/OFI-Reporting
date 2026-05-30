@@ -175,8 +175,8 @@ import { FODashboardData } from '../../../core/models/fo-dashboard.models';
                       <h3>Week {{ report.weekNumber }}, {{ report.year }}</h3>
                       <p class="report-date">{{ formatDateRange(report.weekStartDate, report.weekEndDate) }}</p>
                     </div>
-                    <span [class]="'status-badge status-' + report.status.toLowerCase()">
-                      {{ report.status }}
+                    <span [class]="'status-badge status-' + getReportStatusClass(report.status)">
+                      {{ getReportStatusLabel(report.status) }}
                     </span>
                   </div>
                   
@@ -741,5 +741,35 @@ export class FODashboardComponent implements OnInit {
   formatDateRange(start: string | undefined, end: string | undefined): string {
     if (!start || !end) return 'N/A';
     return `${this.formatDate(start)} - ${this.formatDate(end)}`;
+  }
+
+  /** API may return status as number (0–3) or string — avoid .toLowerCase() on numbers. */
+  getReportStatusLabel(status: string | number | null | undefined): string {
+    if (status == null) return 'Unknown';
+    if (typeof status === 'number') {
+      const labels: Record<number, string> = {
+        0: 'Pending',
+        1: 'Under Review',
+        2: 'Approved',
+        3: 'Rejected'
+      };
+      return labels[status] ?? 'Unknown';
+    }
+    return String(status);
+  }
+
+  getReportStatusClass(status: string | number | null | undefined): string {
+    if (typeof status === 'number') {
+      const classes: Record<number, string> = {
+        0: 'submitted',
+        1: 'underreview',
+        2: 'approved',
+        3: 'rejected'
+      };
+      return classes[status] ?? 'submitted';
+    }
+    return String(status ?? 'unknown')
+      .toLowerCase()
+      .replace(/\s+/g, '');
   }
 }

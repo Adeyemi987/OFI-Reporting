@@ -14,7 +14,7 @@ export interface FODashboardData {
 export interface FORecentReport {
   reportId: string;
   userName: string;
-  status: string;
+  status: string | number;
   hierarchyLevel: string;
   farmersVisited: number;
   gapCount: number;
@@ -36,6 +36,8 @@ export interface FarmVisit {
   farmerId: string;
   farmerName: string;
   visitDate: string;
+  topic: string;
+  category: number;
   location: string;
   notes: string;
 }

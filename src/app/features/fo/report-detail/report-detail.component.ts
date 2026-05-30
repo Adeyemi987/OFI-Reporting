@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/services/auth.service';
+import { ROLE_LABELS, UserRole } from '../../../core/models';
 
 interface TrainingAttendance {
   attendeeName: string;
@@ -19,11 +21,13 @@ interface TrainingSession {
 }
 
 interface FarmerVisit {
-  id: string;
+  id?: string;
   farmerId: string;
   farmerName: string;
   visitDate: string;
   location: string;
+  topic?: string;
+  category?: number;
   notes: string;
 }
 
@@ -31,7 +35,8 @@ interface ReportDetail {
   reportId: string;
   userName: string;
   status: number;
-  hierarchyLevel: number;
+  role?: UserRole | string;
+  hierarchyLevel?: number;
   farmerVisits: FarmerVisit[];
   farmersVisitedCount?: number;
   gapCount: number;
@@ -80,7 +85,7 @@ interface ReportDetail {
               <h1>Week {{ report()!.weekNumber }}, {{ report()!.year }} Report</h1>
               <p class="report-period">{{ formatDateRange(report()!.weekStartDate, report()!.weekEndDate) }}</p>
             </div>
-            <span [class]="'status-badge status-' + report()!.status">
+            <span [class]="'status-badge status-' + getStatusClass(report()!.status)">
               {{ getStatusText(report()!.status) }}
             </span>
           </div>
@@ -100,8 +105,8 @@ interface ReportDetail {
                 <span class="value">{{ report()!.userName }}</span>
               </div>
               <div class="info-row">
-                <span class="label">Hierarchy Level:</span>
-                <span class="value">Level {{ report()!.hierarchyLevel }}</span>
+                <span class="label">Role:</span>
+                <span class="value">{{ userRoleLabel() }}</span>
               </div>
             </div>
           </div>
@@ -140,42 +145,128 @@ interface ReportDetail {
               </svg>
               <h2>Activity Statistics</h2>
             </div>
-            <div class="card-body">
-              <div class="stats-grid">
-                <div class="stat-box">
-                  <div class="stat-icon farmers">
-                    <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
-                    </svg>
+            <div class="card-body activity-body">
+              <div class="activity-duo">
+                <!-- Farm Visits -->
+                <div class="activity-panel farm-panel">
+                  <div class="panel-top">
+                    <div class="panel-icon farm">
+                      <svg width="28" height="28" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 class="panel-title">Farm Visits</h3>
+                      <p class="panel-subtitle">Field outreach this week</p>
+                    </div>
                   </div>
-                  <div class="stat-info">
-                    <div class="stat-value">{{ farmersVisitedCount() }}</div>
-                    <div class="stat-label">Farmers Visited</div>
+                  <div class="panel-metrics">
+                    <div class="metric-hero">
+                      <span class="metric-hero-value">{{ farmVisitsCount() }}</span>
+                      <span class="metric-hero-label">{{ farmVisitsCount() === 1 ? 'Visit' : 'Visits' }} recorded</span>
+                    </div>
+                    <div class="metric-pill">
+                      <span class="metric-pill-value">{{ farmersVisitedCount() }}</span>
+                      <span class="metric-pill-label">Farmers reached</span>
+                    </div>
                   </div>
+                  @if (farmVisitsList().length > 0) {
+                    <ul class="panel-list">
+                      @for (visit of farmVisitsList(); track $index) {
+                        <li class="panel-list-item">
+                          <div class="list-item-head">
+                            <strong>{{ visit.farmerName || 'Unknown farmer' }}</strong>
+                            @if (visit.category != null) {
+                              <span [class]="'cat-chip cat-' + getCategoryKey(visit.category)">{{ getCategoryLabel(visit.category) }}</span>
+                            }
+                          </div>
+                          <div class="list-item-meta">
+                            @if (visit.topic) {
+                              <span>{{ visit.topic }}</span>
+                            }
+                            @if (visit.location) {
+                              <span class="meta-dot">·</span>
+                              <span>{{ visit.location }}</span>
+                            }
+                          </div>
+                          @if (visit.visitDate) {
+                            <span class="list-item-date">{{ formatShortDate(visit.visitDate) }}</span>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  } @else {
+                    <p class="panel-empty">No farm visits recorded for this report.</p>
+                  }
                 </div>
 
-                <div class="stat-box">
-                  <div class="stat-icon training">
-                    <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"/>
-                    </svg>
+                <!-- Training -->
+                <div class="activity-panel training-panel">
+                  <div class="panel-top">
+                    <div class="panel-icon training">
+                      <svg width="28" height="28" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 class="panel-title">Training</h3>
+                      <p class="panel-subtitle">Sessions &amp; participation</p>
+                    </div>
                   </div>
-                  <div class="stat-info">
-                    <div class="stat-value">{{ trainingSessionsCount() }}</div>
-                    <div class="stat-label">Training Sessions</div>
+                  <div class="training-stats-row">
+                    <div class="training-stat">
+                      <span class="training-stat-value">{{ trainingSessionsCount() }}</span>
+                      <span class="training-stat-label">Sessions</span>
+                    </div>
+                    <div class="training-stat-divider"></div>
+                    <div class="training-stat">
+                      <span class="training-stat-value">{{ trainingAttendeesCount() }}</span>
+                      <span class="training-stat-label">Total attendees</span>
+                    </div>
+                    <div class="training-stat-divider"></div>
+                    <div class="training-stat">
+                      <span class="training-stat-value">{{ avgAttendeesPerSession() }}</span>
+                      <span class="training-stat-label">Avg / session</span>
+                    </div>
                   </div>
-                </div>
-
-                <div class="stat-box">
-                  <div class="stat-icon attendees">
-                    <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
-                    </svg>
-                  </div>
-                  <div class="stat-info">
-                    <div class="stat-value">{{ trainingAttendeesCount() }}</div>
-                    <div class="stat-label">Training Attendees</div>
-                  </div>
+                  @if (trainingCategorySummary().length > 0) {
+                    <div class="training-categories">
+                      @for (item of trainingCategorySummary(); track item.label) {
+                        <span [class]="'cat-chip cat-' + item.key">{{ item.count }} {{ item.label }}</span>
+                      }
+                    </div>
+                  }
+                  @if (trainingSessionsList().length > 0) {
+                    <ul class="panel-list training-list">
+                      @for (session of trainingSessionsList(); track $index) {
+                        <li class="panel-list-item training-item">
+                          <div class="list-item-head">
+                            <strong>{{ session.title || 'Untitled session' }}</strong>
+                            @if (session.category != null) {
+                              <span [class]="'cat-chip cat-' + getCategoryKey(session.category)">{{ getCategoryLabel(session.category) }}</span>
+                            }
+                          </div>
+                          <div class="list-item-meta">
+                            @if (session.location) {
+                              <span>{{ session.location }}</span>
+                            }
+                            @if (session.sessionDate) {
+                              <span class="meta-dot">·</span>
+                              <span>{{ formatShortDate(session.sessionDate) }}</span>
+                            }
+                          </div>
+                          <div class="training-attendee-row">
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                            </svg>
+                            <span>{{ getSessionAttendeeCount(session) }} {{ getSessionAttendeeCount(session) === 1 ? 'attendee' : 'attendees' }}</span>
+                          </div>
+                        </li>
+                      }
+                    </ul>
+                  } @else {
+                    <p class="panel-empty">No training sessions recorded for this report.</p>
+                  }
                 </div>
               </div>
             </div>
@@ -427,6 +518,262 @@ interface ReportDetail {
       font-size: 1rem;
     }
 
+    .activity-body {
+      padding: 1.25rem;
+    }
+
+    .activity-duo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    .activity-panel {
+      border-radius: 14px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-height: 280px;
+    }
+
+    .farm-panel {
+      background: linear-gradient(160deg, #ebf8ff 0%, #f0fff4 100%);
+      border: 1px solid #bee3f8;
+    }
+
+    .training-panel {
+      background: linear-gradient(160deg, #faf5ff 0%, #fffaf0 100%);
+      border: 1px solid #d6bcfa;
+    }
+
+    .panel-top {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .panel-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .panel-icon.farm {
+      background: #bee3f8;
+      color: #2c5282;
+    }
+
+    .panel-icon.training {
+      background: #c6f6d5;
+      color: #22543d;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 800;
+      color: #1a202c;
+    }
+
+    .panel-subtitle {
+      margin: 0.15rem 0 0;
+      font-size: 0.8125rem;
+      color: #718096;
+    }
+
+    .panel-metrics {
+      display: flex;
+      align-items: stretch;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .metric-hero {
+      flex: 1;
+      min-width: 120px;
+      background: white;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .metric-hero-value {
+      display: block;
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #2c5282;
+      line-height: 1;
+    }
+
+    .farm-panel .metric-hero-value {
+      color: #2b6cb0;
+    }
+
+    .metric-hero-label {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #718096;
+    }
+
+    .metric-pill {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 12px;
+      border: 1px solid rgba(44, 82, 130, 0.15);
+    }
+
+    .metric-pill-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #2d3748;
+      line-height: 1;
+    }
+
+    .metric-pill-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: #718096;
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .training-stats-row {
+      display: flex;
+      align-items: center;
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .training-stat {
+      flex: 1;
+      text-align: center;
+    }
+
+    .training-stat-value {
+      display: block;
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #553c9a;
+      line-height: 1;
+    }
+
+    .training-stat-label {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .training-stat-divider {
+      width: 1px;
+      height: 40px;
+      background: #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .training-categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .cat-chip {
+      padding: 0.25rem 0.65rem;
+      border-radius: 50px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .cat-gap { background: #e9d8fd; color: #553c9a; }
+    .cat-gep { background: #fed7d7; color: #742a2a; }
+    .cat-gsp { background: #fef5e7; color: #975a16; }
+
+    .panel-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .panel-list-item {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 10px;
+      padding: 0.75rem 0.875rem;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .list-item-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .list-item-head strong {
+      font-size: 0.875rem;
+      color: #1a202c;
+    }
+
+    .list-item-meta {
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      color: #718096;
+      line-height: 1.4;
+    }
+
+    .meta-dot {
+      margin: 0 0.25rem;
+    }
+
+    .list-item-date {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: #a0aec0;
+    }
+
+    .training-attendee-row {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #553c9a;
+    }
+
+    .panel-empty {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: #a0aec0;
+      font-style: italic;
+      padding: 0.5rem 0;
+    }
+
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -533,6 +880,22 @@ interface ReportDetail {
       .stats-grid {
         grid-template-columns: 1fr;
       }
+
+      .activity-duo {
+        grid-template-columns: 1fr;
+      }
+
+      .training-stats-row {
+        flex-wrap: wrap;
+      }
+
+      .training-stat-divider {
+        display: none;
+      }
+
+      .training-stat {
+        min-width: 30%;
+      }
     }
   `]
 })
@@ -540,11 +903,21 @@ export class ReportDetailComponent implements OnInit {
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
   report = signal<ReportDetail | null>(null);
   loading = signal(true);
   error = signal<string | null>(null);
   reportId = '';
+
+  userRoleLabel = computed(() => {
+    const report = this.report();
+    const roleCode = (report?.role ?? this.authService.currentRole()) as UserRole | null;
+    if (roleCode && roleCode in ROLE_LABELS) {
+      return ROLE_LABELS[roleCode as UserRole];
+    }
+    return 'Field Officer';
+  });
 
   farmersVisitedCount = computed(() => {
     const report = this.report();
@@ -571,6 +944,33 @@ export class ReportDetailComponent implements OnInit {
     return sessions.reduce((total, session) => total + (session.attendances?.length || 0), 0);
   });
 
+  farmVisitsList = computed(() => this.report()?.farmerVisits ?? []);
+
+  farmVisitsCount = computed(() => this.farmVisitsList().length);
+
+  trainingSessionsList = computed(() => this.report()?.trainingSessions ?? []);
+
+  avgAttendeesPerSession = computed(() => {
+    const count = this.trainingSessionsCount();
+    if (count === 0) return 0;
+    return Math.round((this.trainingAttendeesCount() / count) * 10) / 10;
+  });
+
+  trainingCategorySummary = computed(() => {
+    const counts = { gap: 0, gep: 0, gsp: 0 };
+    for (const session of this.trainingSessionsList()) {
+      const key = this.getCategoryKey(session.category);
+      if (key === 'gap') counts.gap++;
+      else if (key === 'gep') counts.gep++;
+      else if (key === 'gsp') counts.gsp++;
+    }
+    return [
+      { key: 'gap', label: 'GAP', count: counts.gap },
+      { key: 'gep', label: 'GEP', count: counts.gep },
+      { key: 'gsp', label: 'GSP', count: counts.gsp }
+    ].filter(item => item.count > 0);
+  });
+
   ngOnInit(): void {
     this.reportId = this.route.snapshot.paramMap.get('id') || '';
     if (this.reportId) {
@@ -587,8 +987,22 @@ export class ReportDetailComponent implements OnInit {
 
     this.http.get<any>(`${environment.apiUrl}/api/Reports/${this.reportId}`).subscribe({
       next: (response) => {
-        const reportData = response?.data || response;
-        this.report.set(reportData);
+        const raw = response?.data || response;
+        this.report.set({
+          ...raw,
+          role: raw.role ?? raw.userRole ?? raw.Role ?? 'FO',
+          farmerVisits: raw.farmerVisits ?? raw.FarmerVisits ?? [],
+          trainingSessions: (raw.trainingSessions ?? raw.TrainingSessions ?? []).map((s: any) => ({
+            ...s,
+            attendances: s.attendances ?? s.Attendances ?? []
+          })),
+          farmersVisitedCount: raw.farmersVisitedCount ?? raw.farmersVisited ?? raw.FarmersVisited,
+          trainingSessionsCount: raw.trainingSessionsCount ?? raw.TrainingSessionsCount,
+          trainingAttendeesCount: raw.trainingAttendeesCount ?? raw.trainingAttendees ?? raw.TrainingAttendeesCount,
+          gapCount: raw.gapTaskCount ?? raw.gapCount ?? raw.GapCount ?? 0,
+          gepCount: raw.gepTaskCount ?? raw.gepCount ?? raw.GepCount ?? 0,
+          gspCount: raw.gspTaskCount ?? raw.gspCount ?? raw.GspCount ?? 0,
+        });
         this.loading.set(false);
       },
       error: () => {
@@ -624,7 +1038,44 @@ export class ReportDetailComponent implements OnInit {
       2: 'Approved',
       3: 'Rejected'
     };
-    return statusMap[status] || 'Unknown';
+    return statusMap[status] ?? 'Unknown';
+  }
+
+  getStatusClass(status: number): string {
+    return String(status);
+  }
+
+  getCategoryLabel(category: number | string | null | undefined): string {
+    const n = Number(category);
+    if (n === 1) return 'GAP';
+    if (n === 2) return 'GEP';
+    if (n === 3) return 'GSP';
+    return String(category ?? '');
+  }
+
+  getCategoryKey(category: number | string | null | undefined): string {
+    const n = Number(category);
+    if (n === 1) return 'gap';
+    if (n === 2) return 'gep';
+    if (n === 3) return 'gsp';
+    return 'gap';
+  }
+
+  getSessionAttendeeCount(session: TrainingSession): number {
+    return session.attendances?.length ?? 0;
+  }
+
+  formatShortDate(dateStr: string): string {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
   }
 
   goBack(): void {

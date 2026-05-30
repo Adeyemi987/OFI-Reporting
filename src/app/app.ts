@@ -1,6 +1,7 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Toast, ToastService } from './core/services/toast.service';
+import { OfflineReportSyncService } from './core/services/offline-report-sync.service';
 
 @Component({
   selector: 'app-root',
@@ -55,8 +56,13 @@ import { Toast, ToastService } from './core/services/toast.service';
     </style>
   `
 })
-export class App {
+export class App implements OnInit {
   readonly toastService = inject(ToastService);
+  private readonly offlineSync = inject(OfflineReportSyncService);
+
+  ngOnInit(): void {
+    this.offlineSync.init();
+  }
 
   toastBg(type: Toast['type']): string {
     return { error: '#FEF2F2', warning: '#FFFBEB', success: '#F0FDF4', info: '#EFF6FF' }[type];

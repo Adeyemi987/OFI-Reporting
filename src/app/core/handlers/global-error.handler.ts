@@ -8,6 +8,8 @@ export class GlobalErrorHandler implements ErrorHandler {
   // Use Injector to lazily resolve services and avoid circular dependency at bootstrap
   private readonly injector = inject(Injector);
   private readonly zone = inject(NgZone);
+  private lastToastAt = 0;
+  private readonly toastCooldownMs = 3000;
 
   handleError(error: unknown): void {
     // HTTP errors are already shown by errorInterceptor — skip them here
@@ -41,12 +43,16 @@ export class GlobalErrorHandler implements ErrorHandler {
                        message.includes('Provider not found');
     
     if (!isCritical) {
-      // Show toast for non-critical errors
+      const now = Date.now();
+      if (now - this.lastToastAt < this.toastCooldownMs) {
+        return;
+      }
+      this.lastToastAt = now;
+
       try {
         const toastService = this.injector.get(ToastService);
         toastService.show('Error', 'An error occurred. Please try again.', 'error');
       } catch {
-        // If toast service fails, just log
         console.error('Could not show error toast');
       }
       return;

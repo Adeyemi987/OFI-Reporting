@@ -1,66 +1,75 @@
 import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { GeolocationService, GeoLocation } from '../../../core/services/geolocation.service';
+import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators, AbstractControl } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { GeolocationService } from '../../../core/services/geolocation.service';
+import { OfflineReportSyncService } from '../../../core/services/offline-report-sync.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { environment } from '../../../../environments/environment';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { WeeklyReportSubmitPayload } from '../../../core/models/offline-report.models';
+import { debounceTime, distinctUntilChanged, firstValueFrom } from 'rxjs';
 
 interface DraftData {
   formValue: any;
   currentStep: number;
   selectedFileName?: string;
-  geoLocation?: GeoLocation;
   timestamp: number;
+}
+
+interface PendingLocationResolve {
+  type: 'farm' | 'training';
+  index: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 @Component({
   selector: 'app-create-report',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './create-report.component.html',
   styleUrls: ['./create-report.component.css']
 })
 export class CreateReportComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
-  private http = inject(HttpClient);
   private geoService = inject(GeolocationService);
+  readonly offlineSync = inject(OfflineReportSyncService);
   private toast = inject(ToastService);
   private router = inject(Router);
 
   private readonly DRAFT_KEY = 'weekly_report_draft';
+  private readonly PENDING_LOCATIONS_KEY = 'pending_location_resolves';
   private autoSaveSubscription: any;
+  private readonly onOnline = (): void => { this.processPendingLocations(); };
 
   reportForm!: FormGroup;
   currentStep = signal(1);
   submitting = signal(false);
   selectedFile = signal<File | null>(null);
-  geoLocation = signal<GeoLocation | null>(null);
-  geoLoading = signal(false);
+  locationLoading = signal<{ type: 'farm' | 'training'; index: number } | null>(null);
   hasDraft = signal(false);
 
-  readonly categories = [
-    { value: 1, label: 'GAP (Good Agricultural Practices)' },
-    { value: 2, label: 'GEP (Good Environmental Practices)' },
-    { value: 3, label: 'GSP (Good Social Practices)' }
+  readonly categoryOptions = [
+    { value: 1, label: 'GAP' },
+    { value: 2, label: 'GEP' },
+    { value: 3, label: 'GSP' }
   ];
 
   ngOnInit(): void {
     this.initForm();
     this.checkForDraft();
     this.setupAutoSave();
+    window.addEventListener('online', this.onOnline);
+    this.processPendingLocations();
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('online', this.onOnline);
     if (this.autoSaveSubscription) {
       this.autoSaveSubscription.unsubscribe();
     }
   }
 
   initForm(): void {
-    const today = new Date().toISOString().split('T')[0];
     this.reportForm = this.fb.group({
       weekNumber: [null, [Validators.required, Validators.min(1), Validators.max(53)]],
       year: [new Date().getFullYear(), [Validators.required, Validators.min(2020)]],
@@ -103,7 +112,15 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       if (formValue.farmVisits && formValue.farmVisits.length > 0) {
         formValue.farmVisits.forEach((visit: any) => {
           const visitGroup = this.createFarmVisit();
-          visitGroup.patchValue(visit);
+          visitGroup.patchValue({
+            farmerId: visit.farmerId,
+            farmerName: visit.farmerName,
+            visitDate: visit.visitDate,
+            topic: visit.topic,
+            category: visit.category,
+            location: visit.location,
+            notes: visit.notes
+          });
           this.farmVisits.push(visitGroup);
         });
       }
@@ -131,18 +148,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
         });
       }
 
-      if (formValue.taskRecords && formValue.taskRecords.length > 0) {
-        formValue.taskRecords.forEach((task: any) => {
-          const taskGroup = this.createTaskRecord();
-          taskGroup.patchValue(task);
-          this.taskRecords.push(taskGroup);
-        });
-      }
-
       this.currentStep.set(draftData.currentStep);
-      if (draftData.geoLocation) {
-        this.geoLocation.set(draftData.geoLocation);
-      }
 
       this.hasDraft.set(false);
       this.toast.show('Draft Loaded', 'Your previous draft has been restored', 'success', 3000);
@@ -175,7 +181,6 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       formValue: this.reportForm.value,
       currentStep: this.currentStep(),
       selectedFileName: this.selectedFile()?.name,
-      geoLocation: this.geoLocation() || undefined,
       timestamp: Date.now()
     };
 
@@ -203,6 +208,8 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       farmerId: ['', Validators.required],
       farmerName: ['', Validators.required],
       visitDate: ['', Validators.required],
+      topic: ['', Validators.required],
+      category: [null, Validators.required],
       location: ['', Validators.required],
       notes: ['', Validators.required]
     });
@@ -253,41 +260,6 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     this.getAttendances(sessionIndex).removeAt(attendanceIndex);
   }
 
-  createTaskRecord(): FormGroup {
-    return this.fb.group({
-      title: ['', Validators.required],
-      description: ['', Validators.required],
-      category: [null, Validators.required],
-      isCompleted: [false],
-      completedDate: ['']
-    });
-  }
-
-  addTaskRecord(): void {
-    this.taskRecords.push(this.createTaskRecord());
-  }
-
-  removeTaskRecord(index: number): void {
-    this.taskRecords.removeAt(index);
-  }
-
-  onTaskCompletedChange(index: number): void {
-    const task = this.taskRecords.at(index);
-    const isCompleted = task.get('isCompleted')?.value;
-    const completedDateControl = task.get('completedDate');
-    
-    if (isCompleted) {
-      completedDateControl?.setValidators(Validators.required);
-      if (!completedDateControl?.value) {
-        completedDateControl?.setValue(new Date().toISOString().split('T')[0]);
-      }
-    } else {
-      completedDateControl?.clearValidators();
-      completedDateControl?.setValue('');
-    }
-    completedDateControl?.updateValueAndValidity();
-  }
-
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
@@ -295,23 +267,152 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     }
   }
 
-  captureGeolocation(): void {
-    this.geoLoading.set(true);
+  isLocationLoading(type: 'farm' | 'training', index: number): boolean {
+    const loading = this.locationLoading();
+    return loading?.type === type && loading.index === index;
+  }
+
+  captureLocationName(type: 'farm' | 'training', index: number): void {
+    if (!navigator.onLine) {
+      this.queueLocationCapture(type, index);
+      this.toast.show('Offline', 'Location will be detected when you\'re back online.', 'info', 4000);
+      return;
+    }
+
+    this.locationLoading.set({ type, index });
+
     this.geoService.getCurrentPosition().subscribe({
-      next: (location) => {
-        this.geoLocation.set(location);
-        this.geoLoading.set(false);
-        this.toast.show('Success', `Location captured: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`, 'success');
+      next: (position) => {
+        this.geoService.reverseGeocode(position.latitude, position.longitude).subscribe({
+          next: (placeName) => {
+            this.setLocationValue(type, index, placeName);
+            this.locationLoading.set(null);
+            this.toast.show('Success', `Location set: ${placeName}`, 'success');
+          },
+          error: () => {
+            this.queueLocationCapture(type, index, position);
+            this.locationLoading.set(null);
+            this.toast.show('Offline', 'Location will sync when network is available.', 'info', 4000);
+          }
+        });
       },
       error: (err) => {
-        this.geoLoading.set(false);
+        this.locationLoading.set(null);
         this.toast.show('Location Error', err.message, 'error');
       }
     });
   }
 
+  private setLocationValue(type: 'farm' | 'training', index: number, placeName: string): void {
+    const group = type === 'farm'
+      ? this.farmVisits.at(index)
+      : this.trainingSessions.at(index);
+    group?.get('location')?.setValue(placeName);
+  }
+
+  private getPendingQueue(): PendingLocationResolve[] {
+    try {
+      const raw = localStorage.getItem(this.PENDING_LOCATIONS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private queueLocationCapture(
+    type: 'farm' | 'training',
+    index: number,
+    coords?: { latitude: number; longitude: number }
+  ): void {
+    const queue = this.getPendingQueue().filter(
+      item => !(item.type === type && item.index === index)
+    );
+    queue.push({
+      type,
+      index,
+      latitude: coords?.latitude,
+      longitude: coords?.longitude
+    });
+    localStorage.setItem(this.PENDING_LOCATIONS_KEY, JSON.stringify(queue));
+  }
+
+  private async processPendingLocations(): Promise<void> {
+    if (!navigator.onLine) return;
+
+    const queue = this.getPendingQueue();
+    if (queue.length === 0) return;
+
+    const remaining: PendingLocationResolve[] = [];
+
+    for (const entry of queue) {
+      try {
+        const placeName = entry.latitude != null && entry.longitude != null
+          ? await firstValueFrom(this.geoService.reverseGeocode(entry.latitude, entry.longitude))
+          : await firstValueFrom(this.geoService.resolveLocationName());
+
+        if (this.isEntryValid(entry)) {
+          this.setLocationValue(entry.type, entry.index, placeName);
+        }
+      } catch {
+        if (this.isEntryValid(entry)) {
+          remaining.push(entry);
+        }
+      }
+    }
+
+    localStorage.setItem(this.PENDING_LOCATIONS_KEY, JSON.stringify(remaining));
+
+    if (queue.length > remaining.length) {
+      this.toast.show('Location Synced', 'Pending locations have been updated.', 'success', 3000);
+    }
+  }
+
+  private isEntryValid(entry: PendingLocationResolve): boolean {
+    const array = entry.type === 'farm' ? this.farmVisits : this.trainingSessions;
+    return entry.index >= 0 && entry.index < array.length;
+  }
+
+  isFieldInvalid(group: AbstractControl, field: string): boolean {
+    const control = group.get(field);
+    return !!(control && control.invalid && control.touched);
+  }
+
+  areTrainingSessionsValid(): boolean {
+    for (let i = 0; i < this.trainingSessions.length; i++) {
+      const session = this.trainingSessions.at(i);
+      if (!session.valid) return false;
+      const attendances = this.getAttendances(i);
+      if (attendances.length > 0 && !attendances.valid) return false;
+    }
+    return true;
+  }
+
+  markStepTouched(step: number): void {
+    if (step === 1) {
+      Object.keys(this.reportForm.controls).forEach(key => {
+        if (key !== 'farmVisits' && key !== 'trainingSessions' && key !== 'taskRecords') {
+          this.reportForm.get(key)?.markAsTouched();
+        }
+      });
+    }
+    if (step === 2 || step === 3) {
+      this.farmVisits.markAllAsTouched();
+    }
+    if (step === 3) {
+      this.trainingSessions.markAllAsTouched();
+      this.trainingSessions.controls.forEach((_, i) => this.getAttendances(i).markAllAsTouched());
+    }
+  }
+
   nextStep(): void {
-    if (this.currentStep() < 4) {
+    const step = this.currentStep();
+    if (!this.isStepValid(step)) {
+      this.markStepTouched(step);
+      this.toast.show('Validation Error', 'Please complete all required fields before continuing.', 'error');
+      return;
+    }
+
+    if (step < 4) {
       this.currentStep.update(s => s + 1);
       this.saveDraft();
     }
@@ -324,6 +425,10 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     }
   }
 
+  hasActivityLayer(): boolean {
+    return this.farmVisits.length > 0 || this.trainingSessions.length > 0;
+  }
+
   isStepValid(step: number): boolean {
     switch (step) {
       case 1:
@@ -334,24 +439,24 @@ export class CreateReportComponent implements OnInit, OnDestroy {
                this.reportForm.get('challenges')?.valid &&
                this.reportForm.get('commonFindings')?.valid);
       case 2:
-        return this.farmVisits.valid && this.farmVisits.length > 0;
+        return this.farmVisits.length === 0 || this.farmVisits.valid;
       case 3:
-        return this.trainingSessions.valid && this.taskRecords.valid &&
-               this.trainingSessions.length > 0 && this.taskRecords.length > 0;
+        return this.hasActivityLayer() &&
+               (this.farmVisits.length === 0 || this.farmVisits.valid) &&
+               (this.trainingSessions.length === 0 || this.areTrainingSessionsValid());
       case 4:
-        return !!this.selectedFile() && !!this.geoLocation();
+        return !!this.selectedFile();
       default:
         return false;
     }
   }
 
   canSubmit(): boolean {
-    return this.reportForm.valid && 
-           this.farmVisits.length > 0 &&
-           this.trainingSessions.length > 0 &&
-           this.taskRecords.length > 0 &&
-           !!this.selectedFile() && 
-           !!this.geoLocation() &&
+    return this.isStepValid(1) &&
+           this.hasActivityLayer() &&
+           (this.farmVisits.length === 0 || this.farmVisits.valid) &&
+           (this.trainingSessions.length === 0 || this.areTrainingSessionsValid()) &&
+           !!this.selectedFile() &&
            !this.submitting();
   }
 
@@ -361,53 +466,63 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const file = this.selectedFile();
+    if (!file) {
+      this.toast.show('Validation Error', 'Evidence file is required', 'error');
+      return;
+    }
+
     this.submitting.set(true);
-    const formData = new FormData();
     const formValue = this.reportForm.value;
+
+    const farmVisits = formValue.farmVisits.map((visit: any) => ({
+      ...visit,
+      category: Number(visit.category)
+    }));
 
     const trainingSessions = formValue.trainingSessions.map((session: any) => ({
       ...session,
       category: Number(session.category)
     }));
 
-    const taskRecords = formValue.taskRecords.map((task: any) => ({
-      ...task,
-      category: Number(task.category),
-      completedDate: task.isCompleted ? task.completedDate : null
-    }));
+    const payload: WeeklyReportSubmitPayload = {
+      weekNumber: formValue.weekNumber,
+      year: formValue.year,
+      weekStartDate: formValue.weekStartDate,
+      weekEndDate: formValue.weekEndDate,
+      challenges: formValue.challenges,
+      commonFindings: formValue.commonFindings,
+      farmerVisitsJson: JSON.stringify(farmVisits),
+      trainingSessionsJson: JSON.stringify(trainingSessions),
+      taskRecordsJson: JSON.stringify([]),
+      evidenceType: formValue.evidenceType,
+      evidenceFile: file
+    };
 
-    formData.append('weekNumber', formValue.weekNumber.toString());
-    formData.append('year', formValue.year.toString());
-    formData.append('weekStartDate', formValue.weekStartDate);
-    formData.append('weekEndDate', formValue.weekEndDate);
-    formData.append('challenges', formValue.challenges);
-    formData.append('commonFindings', formValue.commonFindings);
-    formData.append('farmerVisitsJson', JSON.stringify(formValue.farmVisits));
-    formData.append('trainingSessionsJson', JSON.stringify(trainingSessions));
-    formData.append('taskRecordsJson', JSON.stringify(taskRecords));
-    formData.append('evidenceType', formValue.evidenceType);
-    
-    if (this.selectedFile()) {
-      formData.append('evidenceFile', this.selectedFile()!);
-    }
+    void this.offlineSync.submitWeeklyReport(payload).then(result => {
+      this.submitting.set(false);
+      this.clearDraft();
+      this.clearPendingLocationsForForm();
 
-    const geo = this.geoLocation();
-    if (geo) {
-      formData.append('latitude', geo.latitude.toString());
-      formData.append('longitude', geo.longitude.toString());
-    }
-
-    this.http.post(`${environment.apiUrl}/api/Reports`, formData).subscribe({
-      next: () => {
-        this.clearDraft();
+      if (result === 'queued') {
+        this.toast.show(
+          'Saved Offline',
+          'Report saved on this device. It will submit automatically when you have internet.',
+          'success',
+          6000
+        );
+      } else {
         this.toast.show('Success', 'Weekly report submitted successfully!', 'success');
-        this.submitting.set(false);
-        this.router.navigate(['/fo/my-reports']);
-      },
-      error: (err) => {
-        this.submitting.set(false);
-        this.toast.show('Submission Error', err.error?.message || 'Failed to submit report', 'error');
       }
+
+      this.router.navigate(['/fo/my-reports']);
+    }).catch((err: Error) => {
+      this.submitting.set(false);
+      this.toast.show('Submission Error', err.message || 'Failed to submit report', 'error');
     });
+  }
+
+  private clearPendingLocationsForForm(): void {
+    localStorage.removeItem(this.PENDING_LOCATIONS_KEY);
   }
 }

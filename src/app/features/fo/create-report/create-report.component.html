@@ -1,4 +1,11 @@
 <div class="create-report-container">
+  <a routerLink="/fo/my-reports" class="btn-back">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+      <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+    </svg>
+    Back to My Reports
+  </a>
+
   <!-- Draft Banner -->
   @if (hasDraft()) {
     <div class="draft-banner">
@@ -12,6 +19,15 @@
         <button type="button" class="btn-load-draft" (click)="loadDraft()">Load Draft</button>
         <button type="button" class="btn-discard-draft" (click)="discardDraft()">Discard</button>
       </div>
+    </div>
+  }
+
+  @if (!offlineSync.isOnline()) {
+    <div class="offline-banner">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+      </svg>
+      <span>Offline mode — your report will be saved on this device and submitted when internet is available.</span>
     </div>
   }
 
@@ -31,7 +47,7 @@
         <div class="step-line" [class.active]="currentStep() > 2"></div>
         <div class="step" [class.active]="currentStep() >= 3" [class.completed]="currentStep() > 3">
           <div class="step-number">3</div>
-          <div class="step-label">Training & Tasks</div>
+          <div class="step-label">Training</div>
         </div>
         <div class="step-line" [class.active]="currentStep() > 3"></div>
         <div class="step" [class.active]="currentStep() >= 4">
@@ -113,7 +129,7 @@
 
           @if (farmVisits.length === 0) {
             <div class="empty-state">
-              <p>No farm visits added yet. Click "Add Farm Visit" to begin.</p>
+              <p>No farm visits added yet. Click "Add Farm Visit" to begin, or skip to Training if none this week.</p>
             </div>
           }
 
@@ -128,23 +144,88 @@
                   <div class="form-group">
                     <label>Farmer ID <span class="required">*</span></label>
                     <input type="text" formControlName="farmerId" class="form-control">
+                    @if (isFieldInvalid(visit, 'farmerId')) {
+                      <span class="error-text">Farmer ID is required</span>
+                    }
                   </div>
                   <div class="form-group">
                     <label>Farmer Name <span class="required">*</span></label>
                     <input type="text" formControlName="farmerName" class="form-control">
+                    @if (isFieldInvalid(visit, 'farmerName')) {
+                      <span class="error-text">Farmer name is required</span>
+                    }
                   </div>
                   <div class="form-group">
                     <label>Visit Date <span class="required">*</span></label>
                     <input type="date" formControlName="visitDate" class="form-control">
+                    @if (isFieldInvalid(visit, 'visitDate')) {
+                      <span class="error-text">Visit date is required</span>
+                    }
                   </div>
                   <div class="form-group">
-                    <label>Location <span class="required">*</span></label>
-                    <input type="text" formControlName="location" class="form-control">
+                    <label>Topic <span class="required">*</span></label>
+                    <input type="text" formControlName="topic" class="form-control" placeholder="Visit topic">
+                    @if (isFieldInvalid(visit, 'topic')) {
+                      <span class="error-text">Topic is required</span>
+                    }
                   </div>
                 </div>
+
+                <div class="form-group">
+                  <label>Category <span class="required">*</span></label>
+                  <div class="radio-group">
+                    @for (cat of categoryOptions; track cat.value) {
+                      <label class="radio-option">
+                        <input type="radio" formControlName="category" [value]="cat.value">
+                        <span>{{ cat.label }}</span>
+                      </label>
+                    }
+                  </div>
+                  @if (isFieldInvalid(visit, 'category')) {
+                    <span class="error-text">Category is required</span>
+                  }
+                </div>
+
+                <div class="form-group">
+                  <label>Location <span class="required">*</span></label>
+                  <p class="location-hint">Use Detect Location — this field cannot be typed manually.</p>
+                  <div class="location-row">
+                    <input
+                      type="text"
+                      formControlName="location"
+                      class="form-control form-control-readonly"
+                      placeholder="Click Detect Location"
+                      readonly
+                      tabindex="-1"
+                    >
+                    <button
+                      type="button"
+                      class="btn-geo-small"
+                      (click)="captureLocationName('farm', $index)"
+                      [disabled]="isLocationLoading('farm', $index)"
+                    >
+                      @if (isLocationLoading('farm', $index)) {
+                        <span class="spinner-small"></span>
+                        Detecting...
+                      } @else {
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                        </svg>
+                        Detect Location
+                      }
+                    </button>
+                  </div>
+                  @if (isFieldInvalid(visit, 'location')) {
+                    <span class="error-text">Location is required</span>
+                  }
+                </div>
+
                 <div class="form-group">
                   <label>Notes <span class="required">*</span></label>
                   <textarea formControlName="notes" rows="3" class="form-control"></textarea>
+                  @if (isFieldInvalid(visit, 'notes')) {
+                    <span class="error-text">Notes are required</span>
+                  }
                 </div>
               </div>
             }
@@ -152,7 +233,7 @@
         </div>
       }
 
-      <!-- Step 3: Training Sessions & Tasks -->
+      <!-- Step 3: Training Sessions -->
       @if (currentStep() === 3) {
         <div class="form-step">
           <div class="step-header">
@@ -165,6 +246,12 @@
             </button>
           </div>
 
+          @if (trainingSessions.length === 0) {
+            <div class="empty-state">
+              <p>No training sessions added yet. Click "Add Training Session" to begin, or ensure farm visits were added in the previous step.</p>
+            </div>
+          }
+
           <div formArrayName="trainingSessions" class="nested-array">
             @for (session of trainingSessions.controls; track $index) {
               <div [formGroupName]="$index" class="nested-item">
@@ -176,24 +263,66 @@
                   <div class="form-group">
                     <label>Title <span class="required">*</span></label>
                     <input type="text" formControlName="title" class="form-control">
-                  </div>
-                  <div class="form-group">
-                    <label>Location <span class="required">*</span></label>
-                    <input type="text" formControlName="location" class="form-control">
+                    @if (isFieldInvalid(session, 'title')) {
+                      <span class="error-text">Title is required</span>
+                    }
                   </div>
                   <div class="form-group">
                     <label>Session Date <span class="required">*</span></label>
                     <input type="date" formControlName="sessionDate" class="form-control">
+                    @if (isFieldInvalid(session, 'sessionDate')) {
+                      <span class="error-text">Session date is required</span>
+                    }
                   </div>
-                  <div class="form-group">
-                    <label>Category <span class="required">*</span></label>
-                    <select formControlName="category" class="form-control">
-                      <option [value]="null">Select category</option>
-                      @for (cat of categories; track cat.value) {
-                        <option [value]="cat.value">{{ cat.label }}</option>
+                </div>
+
+                <div class="form-group">
+                  <label>Category <span class="required">*</span></label>
+                  <div class="radio-group">
+                    @for (cat of categoryOptions; track cat.value) {
+                      <label class="radio-option">
+                        <input type="radio" formControlName="category" [value]="cat.value">
+                        <span>{{ cat.label }}</span>
+                      </label>
+                    }
+                  </div>
+                  @if (isFieldInvalid(session, 'category')) {
+                    <span class="error-text">Category is required</span>
+                  }
+                </div>
+
+                <div class="form-group">
+                  <label>Location <span class="required">*</span></label>
+                  <p class="location-hint">Use Detect Location — this field cannot be typed manually.</p>
+                  <div class="location-row">
+                    <input
+                      type="text"
+                      formControlName="location"
+                      class="form-control form-control-readonly"
+                      placeholder="Click Detect Location"
+                      readonly
+                      tabindex="-1"
+                    >
+                    <button
+                      type="button"
+                      class="btn-geo-small"
+                      (click)="captureLocationName('training', $index)"
+                      [disabled]="isLocationLoading('training', $index)"
+                    >
+                      @if (isLocationLoading('training', $index)) {
+                        <span class="spinner-small"></span>
+                        Detecting...
+                      } @else {
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                        </svg>
+                        Detect Location
                       }
-                    </select>
+                    </button>
                   </div>
+                  @if (isFieldInvalid(session, 'location')) {
+                    <span class="error-text">Location is required</span>
+                  }
                 </div>
 
                 <div class="attendances-section">
@@ -215,57 +344,9 @@
             }
           </div>
 
-          <div class="step-header" style="margin-top: 2rem;">
-            <h2>Task Records</h2>
-            <button type="button" class="btn-add" (click)="addTaskRecord()">
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
-              </svg>
-              Add Task
-            </button>
-          </div>
-
-          <div formArrayName="taskRecords" class="nested-array">
-            @for (task of taskRecords.controls; track $index) {
-              <div [formGroupName]="$index" class="nested-item">
-                <div class="nested-header">
-                  <h3>Task #{{ $index + 1 }}</h3>
-                  <button type="button" class="btn-remove" (click)="removeTaskRecord($index)">Remove</button>
-                </div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>Title <span class="required">*</span></label>
-                    <input type="text" formControlName="title" class="form-control">
-                  </div>
-                  <div class="form-group">
-                    <label>Category <span class="required">*</span></label>
-                    <select formControlName="category" class="form-control">
-                      <option [value]="null">Select category</option>
-                      @for (cat of categories; track cat.value) {
-                        <option [value]="cat.value">{{ cat.label }}</option>
-                      }
-                    </select>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>Description <span class="required">*</span></label>
-                  <textarea formControlName="description" rows="3" class="form-control"></textarea>
-                </div>
-                <div class="form-group checkbox-group">
-                  <label>
-                    <input type="checkbox" formControlName="isCompleted" (change)="onTaskCompletedChange($index)">
-                    <span>Task Completed</span>
-                  </label>
-                </div>
-                @if (task.get('isCompleted')?.value) {
-                  <div class="form-group">
-                    <label>Completed Date <span class="required">*</span></label>
-                    <input type="date" formControlName="completedDate" class="form-control">
-                  </div>
-                }
-              </div>
-            }
-          </div>
+          @if (!hasActivityLayer()) {
+            <p class="step-hint">Add at least one farm visit or training session before proceeding to evidence.</p>
+          }
         </div>
       }
 
@@ -291,34 +372,6 @@
               </label>
             </div>
           </div>
-
-          <div class="geolocation-section">
-            <h3>Geolocation (Required for Geotagged Photo)</h3>
-            @if (!geoLocation()) {
-              <button type="button" class="btn-geo" (click)="captureGeolocation()" [disabled]="geoLoading()">
-                @if (geoLoading()) {
-                  <span class="spinner-small"></span>
-                  Capturing location...
-                } @else {
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                  </svg>
-                  Capture Location
-                }
-              </button>
-            } @else {
-              <div class="geo-info">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                </svg>
-                <div>
-                  <strong>Location Captured</strong>
-                  <p>Lat: {{ geoLocation()!.latitude.toFixed(6) }}, Long: {{ geoLocation()!.longitude.toFixed(6) }}</p>
-                  <p class="accuracy">Accuracy: {{ geoLocation()!.accuracy.toFixed(2) }}m</p>
-                </div>
-              </div>
-            }
-          </div>
         </div>
       }
 
@@ -328,7 +381,7 @@
           <button type="button" class="btn-secondary" (click)="prevStep()">Previous</button>
         }
         @if (currentStep() < 4) {
-          <button type="button" class="btn-primary" (click)="nextStep()" [disabled]="!isStepValid(currentStep())">Next</button>
+          <button type="button" class="btn-primary" (click)="nextStep()">Next</button>
         }
         @if (currentStep() === 4) {
           <button type="submit" class="btn-submit" [disabled]="!canSubmit()">
