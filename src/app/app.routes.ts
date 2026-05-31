@@ -40,6 +40,11 @@ export const routes: Routes = [
           import('./features/fo/create-report/create-report.component').then(m => m.CreateReportComponent)
       },
       {
+        path: 'resubmit-report/:id',
+        loadComponent: () =>
+          import('./features/fo/create-report/create-report.component').then(m => m.CreateReportComponent)
+      },
+      {
         path: 'my-reports',
         loadComponent: () =>
           import('./features/fo/my-reports/my-reports.component').then(m => m.MyReportsComponent)

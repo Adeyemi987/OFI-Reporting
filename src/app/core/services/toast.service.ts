@@ -7,6 +7,10 @@ export interface Toast {
   type: 'error' | 'warning' | 'success' | 'info';
 }
 
+/**
+ * Non-blocking notifications — success, info, and background activity.
+ * For blocking API/runtime errors the user must read, use ErrorModalService.
+ */
 @Injectable({ providedIn: 'root' })
 export class ToastService {
   readonly toasts = signal<Toast[]>([]);

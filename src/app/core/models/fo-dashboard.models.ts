@@ -29,14 +29,22 @@ export interface FORecentReport {
   rejectionReason?: string;
 }
 
-export type FOReportStatus = 'Submitted' | 'UnderReview' | 'Approved' | 'Rejected';
+export type FOReportStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface FOReportsPage {
+  items: FORecentReport[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
 
 // Weekly Report Models
 export interface FarmVisit {
-  tag: string;
+  farmerId: string;
   farmerName: string;
+  title: string;
   visitDate: string;
-  topic: string;
   category: number;
   notes: string;
 }
@@ -91,4 +99,14 @@ export interface WeeklyReportSubmission {
   taskRecordsJson: string;
   evidenceFile: File;
   evidenceType: string;
+}
+
+export interface WeeklyReportResubmitPayload {
+  challenges: string;
+  commonFindings: string;
+  farmerVisitsJson: string;
+  trainingSessionsJson: string;
+  taskRecordsJson: string;
+  evidenceType: string;
+  evidenceFile?: File;
 }

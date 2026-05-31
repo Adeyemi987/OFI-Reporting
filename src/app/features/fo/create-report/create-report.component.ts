@@ -1,10 +1,15 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators, AbstractControl } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { OfflineReportSyncService } from '../../../core/services/offline-report-sync.service';
+import { FODashboardService } from '../../../core/services/fo-dashboard.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ErrorModalService } from '../../../core/services/error-modal.service';
+import { extractErrorMessage } from '../../../core/utils/http-error.util';
 import { WeeklyReportSubmitPayload } from '../../../core/models/offline-report.models';
+import { API_BASE_URL } from '../../../core/tokens';
 import { debounceTime, distinctUntilChanged, merge } from 'rxjs';
 
 interface DraftData {
@@ -12,6 +17,13 @@ interface DraftData {
   currentStep: number;
   selectedFileName?: string;
   timestamp: number;
+}
+
+interface ExistingEvidence {
+  id: string;
+  originalFileName: string;
+  downloadUrl: string;
+  contentType: string;
 }
 
 @Component({
@@ -22,10 +34,19 @@ interface DraftData {
   styleUrls: ['./create-report.component.css']
 })
 export class CreateReportComponent implements OnInit, OnDestroy {
+  @ViewChild('fileInput') fileInputRef?: ElementRef<HTMLInputElement>;
+
   private fb = inject(FormBuilder);
+  private http = inject(HttpClient);
+  private readonly baseUrl = inject(API_BASE_URL);
   readonly offlineSync = inject(OfflineReportSyncService);
+  private foDashboard = inject(FODashboardService);
   private toast = inject(ToastService);
+  private errorModal = inject(ErrorModalService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  private previewObjectUrls: string[] = [];
 
   private readonly DRAFT_KEY = 'weekly_report_draft';
   private autoSaveSubscription: any;
@@ -33,20 +54,36 @@ export class CreateReportComponent implements OnInit, OnDestroy {
   reportForm!: FormGroup;
   currentStep = signal(1);
   submitting = signal(false);
+  loadingReport = signal(false);
   selectedFile = signal<File | null>(null);
   hasDraft = signal(false);
   showFarmVisitSetup = signal(false);
   canProceedToNext = signal(false);
+  resubmitReportId = signal<string | null>(null);
+  rejectionReason = signal<string | null>(null);
+  existingEvidence = signal<ExistingEvidence | null>(null);
+  existingEvidencePreviewUrl = signal<string | null>(null);
+  existingEvidencePreviewLoading = signal(false);
+  selectedFilePreviewUrl = signal<string | null>(null);
+
+  isResubmitMode = computed(() => !!this.resubmitReportId());
+  hasEvidenceAttached = computed(() => !!this.selectedFile() || !!this.existingEvidence());
 
   readonly categoryOptions = [
-    { value: 1, label: 'GAP' },
-    { value: 2, label: 'GEP' },
-    { value: 3, label: 'GSP' }
+    { value: 0, label: 'GAP' },
+    { value: 1, label: 'GEP' },
+    { value: 2, label: 'GSP' }
   ];
 
   ngOnInit(): void {
     this.initForm();
-    this.checkForDraft();
+    const reportId = this.route.snapshot.paramMap.get('id');
+    if (reportId) {
+      this.resubmitReportId.set(reportId);
+      this.loadReportForResubmit(reportId);
+    } else {
+      this.checkForDraft();
+    }
     this.setupAutoSave();
     this.setupNavigationRefresh();
   }
@@ -55,6 +92,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     if (this.autoSaveSubscription) {
       this.autoSaveSubscription.unsubscribe();
     }
+    this.revokeAllPreviewUrls();
   }
 
   initForm(): void {
@@ -65,8 +103,6 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       weekEndDate: ['', Validators.required],
       challenges: ['', Validators.required],
       commonFindings: ['', Validators.required],
-      farmVisitTopic: [''],
-      farmVisitCategory: [null as number | null],
       farmVisits: this.fb.array([]),
       trainingSessions: this.fb.array([]),
       taskRecords: this.fb.array([]),
@@ -96,10 +132,6 @@ export class CreateReportComponent implements OnInit, OnDestroy {
         weekEndDate: formValue.weekEndDate,
         challenges: formValue.challenges,
         commonFindings: formValue.commonFindings,
-        farmVisitTopic: formValue.farmVisitTopic ?? formValue.farmVisits?.[0]?.topic ?? '',
-        farmVisitCategory: this.normalizeCategory(
-          formValue.farmVisitCategory ?? formValue.farmVisits?.[0]?.category
-        ),
         evidenceType: formValue.evidenceType ?? 'ProofofVisitPhoto'
       });
 
@@ -108,6 +140,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
         formValue.farmVisits.forEach((visit: any) => {
           const visitGroup = this.createFarmVisit();
           visitGroup.patchValue({
+            title: visit.title ?? visit.topic ?? formValue.farmVisitTopic ?? '',
             tag: visit.tag ?? visit.farmerId ?? '',
             farmerName: visit.farmerName,
             visitDate: visit.visitDate,
@@ -140,7 +173,6 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       }
 
       this.currentStep.set(draftData.currentStep);
-      this.updateFarmVisitSharedValidators();
       this.refreshNavigationState();
 
       this.hasDraft.set(false);
@@ -180,42 +212,16 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     this.canProceedToNext.set(this.isStepValid(this.currentStep()));
   }
 
-  private updateFarmVisitSharedValidators(): void {
-    const topic = this.reportForm.get('farmVisitTopic');
-    const category = this.reportForm.get('farmVisitCategory');
-    const requireSharedFields = this.farmVisits.length > 0;
-
-    if (requireSharedFields) {
-      topic?.setValidators(Validators.required);
-      category?.setValidators(Validators.required);
-    } else {
-      topic?.clearValidators();
-      category?.clearValidators();
-    }
-
-    topic?.updateValueAndValidity({ emitEvent: false });
-    category?.updateValueAndValidity({ emitEvent: false });
-  }
-
   private normalizeCategory(value: unknown): number | null {
     if (value === null || value === undefined || value === '') {
       return null;
     }
     const category = Number(value);
-    return category === 1 || category === 2 || category === 3 ? category : null;
-  }
-
-  private hasFarmVisitCategory(): boolean {
-    return this.normalizeCategory(this.reportForm.get('farmVisitCategory')?.value) !== null;
-  }
-
-  private hasFarmVisitTopic(): boolean {
-    const value = this.reportForm.get('farmVisitTopic')?.value;
-    return typeof value === 'string' && value.trim().length > 0;
+    return category === 0 || category === 1 || category === 2 ? category : null;
   }
 
   saveDraft(): void {
-    if (this.reportForm.pristine) return;
+    if (this.isResubmitMode() || this.reportForm.pristine) return;
 
     const draftData: DraftData = {
       formValue: this.reportForm.value,
@@ -245,6 +251,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
 
   createFarmVisit(): FormGroup {
     return this.fb.group({
+      title: ['', Validators.required],
       tag: ['', Validators.required],
       farmerName: ['', Validators.required],
       visitDate: ['', Validators.required],
@@ -254,27 +261,15 @@ export class CreateReportComponent implements OnInit, OnDestroy {
 
   openFarmVisitSetup(): void {
     this.showFarmVisitSetup.set(true);
-    this.refreshNavigationState();
-  }
-
-  selectFarmVisitCategory(value: number): void {
-    this.reportForm.get('farmVisitCategory')?.setValue(value);
-    this.reportForm.get('farmVisitCategory')?.markAsTouched();
+    if (this.farmVisits.length === 0) {
+      this.farmVisits.push(this.createFarmVisit());
+    }
     this.refreshNavigationState();
   }
 
   addFarmVisit(): void {
-    const topicCtrl = this.reportForm.get('farmVisitTopic');
-    topicCtrl?.markAsTouched();
-    this.reportForm.get('farmVisitCategory')?.markAsTouched();
-
-    if (!this.hasFarmVisitTopic() || !this.hasFarmVisitCategory()) {
-      this.toast.show('Validation Error', 'Please set Topic and Category before adding a farm visit.', 'error');
-      return;
-    }
-
+    this.showFarmVisitSetup.set(true);
     this.farmVisits.push(this.createFarmVisit());
-    this.updateFarmVisitSharedValidators();
     this.refreshNavigationState();
   }
 
@@ -283,7 +278,6 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     if (this.farmVisits.length === 0) {
       this.showFarmVisitSetup.set(false);
     }
-    this.updateFarmVisitSharedValidators();
     this.refreshNavigationState();
   }
 
@@ -326,18 +320,78 @@ export class CreateReportComponent implements OnInit, OnDestroy {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.selectedFile.set(input.files[0]);
+      const file = input.files[0];
+      this.revokePreviewUrl(this.selectedFilePreviewUrl());
+      this.selectedFile.set(file);
+      this.selectedFilePreviewUrl.set(this.createPreviewUrl(file));
       this.refreshNavigationState();
     }
   }
 
-  isFieldInvalid(group: AbstractControl, field: string): boolean {
-    const control = group.get(field);
-    return !!(control && control.invalid && control.touched);
+  removeExistingEvidence(): void {
+    this.revokePreviewUrl(this.existingEvidencePreviewUrl());
+    this.existingEvidencePreviewUrl.set(null);
+    this.existingEvidence.set(null);
+    this.resetFileInput();
+    this.refreshNavigationState();
   }
 
-  isSharedFarmFieldInvalid(field: string): boolean {
-    const control = this.reportForm.get(field);
+  removeSelectedFile(): void {
+    this.revokePreviewUrl(this.selectedFilePreviewUrl());
+    this.selectedFilePreviewUrl.set(null);
+    this.selectedFile.set(null);
+    this.resetFileInput();
+    this.refreshNavigationState();
+  }
+
+  private resetFileInput(): void {
+    const input = this.fileInputRef?.nativeElement;
+    if (input) {
+      input.value = '';
+    }
+  }
+
+  private loadExistingEvidencePreview(evidence: ExistingEvidence): void {
+    if (!evidence.downloadUrl) return;
+
+    this.existingEvidencePreviewLoading.set(true);
+    const url = evidence.downloadUrl.startsWith('http')
+      ? evidence.downloadUrl
+      : `${this.baseUrl}${evidence.downloadUrl}`;
+
+    this.http.get(url, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        this.revokePreviewUrl(this.existingEvidencePreviewUrl());
+        this.existingEvidencePreviewUrl.set(this.createPreviewUrl(blob));
+        this.existingEvidencePreviewLoading.set(false);
+      },
+      error: () => {
+        this.existingEvidencePreviewLoading.set(false);
+      }
+    });
+  }
+
+  private createPreviewUrl(source: Blob | File): string {
+    const url = URL.createObjectURL(source);
+    this.previewObjectUrls.push(url);
+    return url;
+  }
+
+  private revokePreviewUrl(url: string | null): void {
+    if (!url) return;
+    URL.revokeObjectURL(url);
+    this.previewObjectUrls = this.previewObjectUrls.filter(item => item !== url);
+  }
+
+  private revokeAllPreviewUrls(): void {
+    this.previewObjectUrls.forEach(url => URL.revokeObjectURL(url));
+    this.previewObjectUrls = [];
+    this.existingEvidencePreviewUrl.set(null);
+    this.selectedFilePreviewUrl.set(null);
+  }
+
+  isFieldInvalid(group: AbstractControl, field: string): boolean {
+    const control = group.get(field);
     return !!(control && control.invalid && control.touched);
   }
 
@@ -354,10 +408,6 @@ export class CreateReportComponent implements OnInit, OnDestroy {
   isFarmVisitLayerValid(): boolean {
     if (this.farmVisits.length === 0) {
       return true;
-    }
-
-    if (!this.hasFarmVisitTopic() || !this.hasFarmVisitCategory()) {
-      return false;
     }
 
     for (let i = 0; i < this.farmVisits.length; i++) {
@@ -378,8 +428,6 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       });
     }
     if (step === 2) {
-      this.reportForm.get('farmVisitTopic')?.markAsTouched();
-      this.reportForm.get('farmVisitCategory')?.markAsTouched();
       this.farmVisits.markAllAsTouched();
     }
     if (step === 3) {
@@ -431,22 +479,120 @@ export class CreateReportComponent implements OnInit, OnDestroy {
                this.isFarmVisitLayerValid() &&
                (this.trainingSessions.length === 0 || this.areTrainingSessionsValid());
       case 4:
-        return !!this.selectedFile();
+        return this.hasEvidenceAttached();
       default:
         return false;
     }
   }
 
   canSubmit(): boolean {
+    const hasEvidence = this.hasEvidenceAttached();
     return this.isStepValid(1) &&
            this.hasActivityLayer() &&
            this.isFarmVisitLayerValid() &&
            (this.trainingSessions.length === 0 || this.areTrainingSessionsValid()) &&
-           !!this.selectedFile() &&
+           hasEvidence &&
            !this.submitting();
   }
 
+  loadReportForResubmit(reportId: string): void {
+    this.loadingReport.set(true);
+    this.foDashboard.getReportDetails(reportId).subscribe({
+      next: (response) => {
+        const raw = response?.data ?? response;
+        this.prefillFormFromReport(raw);
+        this.loadingReport.set(false);
+      },
+      error: () => {
+        this.loadingReport.set(false);
+        this.errorModal.show('Load Failed', 'Unable to load report for resubmission.');
+        this.router.navigate(['/fo/my-reports']);
+      }
+    });
+  }
+
+  prefillFormFromReport(raw: any): void {
+    const farmerVisits = raw.farmerVisits ?? raw.FarmerVisits ?? [];
+    const trainingSessions = (raw.trainingSessions ?? raw.TrainingSessions ?? []).map((s: any) => ({
+      ...s,
+      attendances: s.attendances ?? s.Attendances ?? []
+    }));
+    const evidences = raw.evidences ?? raw.Evidences ?? [];
+    const firstEvidence = evidences[0];
+
+    this.rejectionReason.set(raw.rejectionReason ?? null);
+    if (firstEvidence) {
+      const evidence: ExistingEvidence = {
+        id: firstEvidence.id ?? firstEvidence.Id ?? '',
+        originalFileName: firstEvidence.originalFileName ?? firstEvidence.OriginalFileName ?? 'Evidence file',
+        downloadUrl: firstEvidence.downloadUrl ?? firstEvidence.DownloadUrl ?? '',
+        contentType: firstEvidence.contentType ?? firstEvidence.ContentType ?? 'image/jpeg'
+      };
+      this.existingEvidence.set(evidence);
+      this.loadExistingEvidencePreview(evidence);
+    }
+
+    this.reportForm.patchValue({
+      weekNumber: raw.weekNumber,
+      year: raw.year,
+      weekStartDate: this.toDateInputValue(raw.weekStartDate),
+      weekEndDate: this.toDateInputValue(raw.weekEndDate),
+      challenges: raw.challenges ?? '',
+      commonFindings: raw.commonFindings ?? '',
+      evidenceType: firstEvidence?.evidenceType ?? raw.evidenceType ?? 'ProofofVisitPhoto'
+    });
+
+    this.farmVisits.clear();
+    if (farmerVisits.length > 0) {
+      this.showFarmVisitSetup.set(true);
+      farmerVisits.forEach((visit: any) => {
+        const visitGroup = this.createFarmVisit();
+        visitGroup.patchValue({
+          title: visit.title ?? visit.topic ?? '',
+          tag: visit.farmerId ?? visit.tag ?? '',
+          farmerName: visit.farmerName ?? '',
+          visitDate: this.toDateInputValue(visit.visitDate),
+          notes: visit.notes ?? ''
+        });
+        this.farmVisits.push(visitGroup);
+      });
+    }
+
+    this.trainingSessions.clear();
+    trainingSessions.forEach((session: any) => {
+      const sessionGroup = this.createTrainingSession();
+      sessionGroup.patchValue({
+        title: session.title ?? '',
+        sessionDate: this.toDateInputValue(session.sessionDate),
+        category: this.normalizeCategory(session.category)
+      });
+
+      const attendancesArray = sessionGroup.get('attendances') as FormArray;
+      (session.attendances ?? []).forEach((attendance: any) => {
+        const attendanceGroup = this.createAttendance();
+        attendanceGroup.patchValue({
+          attendeeName: attendance.attendeeName ?? '',
+          attendeeId: attendance.attendeeId ?? ''
+        });
+        attendancesArray.push(attendanceGroup);
+      });
+
+      this.trainingSessions.push(sessionGroup);
+    });
+
+    this.refreshNavigationState();
+  }
+
+  private toDateInputValue(dateStr: string | null | undefined): string {
+    if (!dateStr) return '';
+    return dateStr.split('T')[0];
+  }
+
   onSubmit(): void {
+    if (this.isResubmitMode()) {
+      this.onResubmit();
+      return;
+    }
     if (!this.canSubmit()) {
       this.toast.show('Validation Error', 'Please complete all required fields', 'error');
       return;
@@ -462,11 +608,10 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     const formValue = this.reportForm.value;
 
     const farmVisits = formValue.farmVisits.map((visit: any) => ({
-      tag: visit.tag,
+      farmerId: visit.tag,
       farmerName: visit.farmerName,
+      title: visit.title,
       visitDate: visit.visitDate,
-      topic: formValue.farmVisitTopic,
-      category: Number(formValue.farmVisitCategory),
       notes: visit.notes
     }));
 
@@ -505,9 +650,56 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       }
 
       this.router.navigate(['/fo/my-reports']);
-    }).catch((err: Error) => {
+    }).catch((err: unknown) => {
       this.submitting.set(false);
-      this.toast.show('Submission Error', err.message || 'Failed to submit report', 'error');
+      this.errorModal.show('Submission Error', extractErrorMessage(err));
+    });
+  }
+
+  onResubmit(): void {
+    if (!this.canSubmit()) {
+      this.toast.show('Validation Error', 'Please complete all required fields', 'error');
+      return;
+    }
+
+    const reportId = this.resubmitReportId();
+    if (!reportId) return;
+
+    this.submitting.set(true);
+    const formValue = this.reportForm.value;
+    const file = this.selectedFile();
+
+    const farmVisits = formValue.farmVisits.map((visit: any) => ({
+      farmerId: visit.tag,
+      farmerName: visit.farmerName,
+      title: visit.title,
+      visitDate: visit.visitDate,
+      notes: visit.notes
+    }));
+
+    const trainingSessions = formValue.trainingSessions.map((session: any) => ({
+      ...session,
+      category: Number(session.category)
+    }));
+
+    this.foDashboard.resubmitReport(reportId, {
+      challenges: formValue.challenges,
+      commonFindings: formValue.commonFindings,
+      farmerVisitsJson: JSON.stringify(farmVisits),
+      trainingSessionsJson: JSON.stringify(trainingSessions),
+      taskRecordsJson: JSON.stringify([]),
+      evidenceType: formValue.evidenceType,
+      evidenceFile: file ?? undefined
+    }).subscribe({
+      next: (res) => {
+        this.submitting.set(false);
+        this.toast.show('Success', res.message || 'Report resubmitted successfully!', 'success');
+        this.router.navigate(['/fo/report-details', reportId]);
+      },
+      error: (err) => {
+        this.submitting.set(false);
+        this.errorModal.show('Resubmission Error', extractErrorMessage(err));
+      }
     });
   }
 }

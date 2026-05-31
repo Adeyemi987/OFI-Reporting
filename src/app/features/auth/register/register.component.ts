@@ -514,14 +514,12 @@ export class RegisterComponent {
           this.loading.set(false);
           const msg = res.message ?? 'Registration failed. Please try again.';
           this.errorMsg.set(msg);
-          this.toast.show('Registration Failed', msg, 'error');
         }
       },
       error: (err) => {
         this.loading.set(false);
         const msg = err?.error?.message ?? 'Registration failed. Please try again.';
         this.errorMsg.set(msg);
-        this.toast.show('Registration Failed', msg, 'error');
       },
     });
   }

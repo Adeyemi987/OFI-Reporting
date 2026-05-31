@@ -5,6 +5,11 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
 import { ROLE_LABELS, UserRole } from '../../../core/models';
+import {
+  getFoReportStatusClass,
+  getFoReportStatusLabel,
+  getFoDisplayStatus
+} from '../../../core/utils/fo-report-status.util';
 
 interface TrainingAttendance {
   attendeeName: string;
@@ -27,6 +32,7 @@ interface FarmerVisit {
   farmerName: string;
   visitDate: string;
   location?: string;
+  title?: string;
   topic?: string;
   category?: number;
   notes: string;
@@ -35,7 +41,7 @@ interface FarmerVisit {
 interface ReportDetail {
   reportId: string;
   userName: string;
-  status: number;
+  status: number | string;
   role?: UserRole | string;
   hierarchyLevel?: number;
   farmerVisits: FarmerVisit[];
@@ -74,71 +80,62 @@ interface ReportDetail {
           <button (click)="loadReport()" class="btn-retry">Retry</button>
         </div>
       } @else if (report()) {
-        <div class="detail-header">
-          <button (click)="goBack()" class="btn-back">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
-            </svg>
-            Back to Reports
-          </button>
-          <div class="header-content">
-            <div>
-              <h1>Week {{ report()!.weekNumber }}, {{ report()!.year }} Report</h1>
-              <p class="report-period">{{ formatDateRange(report()!.weekStartDate, report()!.weekEndDate) }}</p>
-            </div>
-            <span [class]="'status-badge status-' + getStatusClass(report()!.status)">
-              {{ getStatusText(report()!.status) }}
+        <nav class="detail-nav" aria-label="Report navigation">
+          <button type="button" (click)="goBack()" class="btn-back">
+            <span class="btn-back-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+              </svg>
             </span>
+            <span class="btn-back-copy">
+              <span class="btn-back-eyebrow">Return to list</span>
+              <span class="btn-back-label">Back to Reports</span>
+            </span>
+          </button>
+        </nav>
+
+        <div class="detail-header hero-card">
+          <div class="hero-accent"></div>
+
+          <div class="hero-body">
+            <div class="hero-top">
+              <div class="hero-user">
+                <div class="hero-avatar" aria-hidden="true">{{ userInitials() }}</div>
+                <div class="hero-user-text">
+                  <span class="hero-eyebrow">Submitted by</span>
+                  <h2 class="hero-name">{{ report()!.userName }}</h2>
+                  <span class="hero-role-chip">{{ userRoleLabel() }}</span>
+                </div>
+              </div>
+              <span [class]="'status-badge status-' + getStatusClass(report()!.status)">
+                {{ getStatusText(report()!.status) }}
+              </span>
+            </div>
+
+            <div class="hero-divider"></div>
+
+            <div class="hero-bottom">
+              <div class="hero-week-display">
+                <span class="hero-week-badge">W{{ report()!.weekNumber }}</span>
+                <div>
+                  <div class="hero-period-heading">
+                    <span class="hero-duration-chip">
+                      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                      </svg>
+                      {{ formatDateRange(report()!.weekStartDate, report()!.weekEndDate) }}
+                    </span>
+                    <span class="hero-period-sep" aria-hidden="true"></span>
+                    <span class="hero-week-label">Reporting period</span>
+                  </div>
+                  <h1 class="hero-title">Week {{ report()!.weekNumber }}, {{ report()!.year }}</h1>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="detail-content">
-          <div class="info-card">
-            <div class="card-header">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
-              </svg>
-              <h2>User Information</h2>
-            </div>
-            <div class="card-body">
-              <div class="info-row">
-                <span class="label">Name:</span>
-                <span class="value">{{ report()!.userName }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Role:</span>
-                <span class="value">{{ userRoleLabel() }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="info-card">
-            <div class="card-header">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
-              </svg>
-              <h2>Report Period</h2>
-            </div>
-            <div class="card-body">
-              <div class="info-row">
-                <span class="label">Week Number:</span>
-                <span class="value">Week {{ report()!.weekNumber }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Year:</span>
-                <span class="value">{{ report()!.year }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Start Date:</span>
-                <span class="value">{{ formatDate(report()!.weekStartDate) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">End Date:</span>
-                <span class="value">{{ formatDate(report()!.weekEndDate) }}</span>
-              </div>
-            </div>
-          </div>
-
           <div class="info-card full-width">
             <div class="card-header">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -161,41 +158,54 @@ interface ReportDetail {
                       <p class="panel-subtitle">Field outreach this week</p>
                     </div>
                   </div>
-                  <div class="panel-metrics">
-                    <div class="metric-hero">
-                      <span class="metric-hero-value">{{ farmVisitsCount() }}</span>
-                      <span class="metric-hero-label">{{ farmVisitsCount() === 1 ? 'Visit' : 'Visits' }} recorded</span>
-                    </div>
-                    <div class="metric-pill">
-                      <span class="metric-pill-value">{{ farmersVisitedCount() }}</span>
-                      <span class="metric-pill-label">Farmers reached</span>
+                  <div class="panel-metrics farm-metrics-card">
+                    <div class="farm-metrics-stats">
+                      <div class="metric-hero">
+                        <span class="metric-hero-value">{{ farmVisitsCount() }}</span>
+                        <span class="metric-hero-label">{{ farmVisitsCount() === 1 ? 'Visit' : 'Visits' }} recorded</span>
+                      </div>
+                      <div class="metric-pill">
+                        <span class="metric-pill-value">{{ farmersVisitedCount() }}</span>
+                        <span class="metric-pill-label">Farmers reached</span>
+                      </div>
                     </div>
                   </div>
                   @if (farmVisitsList().length > 0) {
-                    <ul class="panel-list">
-                      @for (visit of farmVisitsList(); track $index) {
-                        <li class="panel-list-item">
-                          <div class="list-item-head">
-                            <strong>{{ visit.farmerName || 'Unknown farmer' }}</strong>
-                            @if (visit.category != null) {
-                              <span [class]="'cat-chip cat-' + getCategoryKey(visit.category)">{{ getCategoryLabel(visit.category) }}</span>
-                            }
-                          </div>
-                          <div class="list-item-meta">
-                            @if (visit.topic) {
-                              <span>{{ visit.topic }}</span>
-                            }
-                            @if (visit.location) {
-                              <span class="meta-dot">·</span>
-                              <span>{{ visit.location }}</span>
-                            }
-                          </div>
-                          @if (visit.visitDate) {
-                            <span class="list-item-date">{{ formatShortDate(visit.visitDate) }}</span>
+                    <div class="farmers-records-block">
+                      <div class="farmers-section-header">
+                        <span class="farmers-section-title">Farmer records</span>
+                        <span class="farmers-section-count">{{ farmVisitsCount() }} {{ farmVisitsCount() === 1 ? 'farmer' : 'farmers' }}</span>
+                      </div>
+                      <div class="farmers-records-scroll" tabindex="0" role="region" aria-label="Farmer records list">
+                        <ul class="panel-list farmers-records-list">
+                          @for (visit of farmVisitsList(); track $index) {
+                            <li class="panel-list-item farmer-record-item">
+                              <span class="farmer-record-index" aria-hidden="true">{{ $index + 1 }}</span>
+                              <div class="farmer-record-lines">
+                                <div class="farmer-record-primary">
+                                  <strong class="farmer-record-name">{{ visit.farmerName || 'Unknown farmer' }}</strong>
+                                  @if (visit.farmerId || visit.tag) {
+                                    <span class="farmer-chip">{{ visit.farmerId || visit.tag }}</span>
+                                  }
+                                  @if (visit.visitDate) {
+                                    <span class="farmer-chip farmer-chip-date">{{ formatShortDate(visit.visitDate) }}</span>
+                                  }
+                                </div>
+                                @if (getVisitTitle(visit)) {
+                                  <p class="farmer-record-title" [title]="getVisitTitle(visit)">
+                                    <span class="farmer-title-k">Title</span>
+                                    <span class="farmer-title-v">{{ getVisitTitle(visit) }}</span>
+                                  </p>
+                                }
+                              </div>
+                            </li>
                           }
-                        </li>
+                        </ul>
+                      </div>
+                      @if (farmVisitsCount() > 8) {
+                        <p class="farmers-scroll-hint">Scroll inside this section to view all farmers</p>
                       }
-                    </ul>
+                    </div>
                   } @else {
                     <p class="panel-empty">No farm visits recorded for this report.</p>
                   }
@@ -316,16 +326,28 @@ interface ReportDetail {
             </div>
           </div>
 
-          @if (report()!.rejectionReason) {
+          @if (isReportRejected()) {
             <div class="info-card full-width rejection-card">
-              <div class="card-header">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                </svg>
-                <h2>Rejection Reason</h2>
+              <div class="card-header rejection-header">
+                <div class="rejection-header-title">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                  </svg>
+                  <h2>Rejection Reason</h2>
+                </div>
+                <button type="button" class="btn-resubmit" (click)="goToResubmit()">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                  </svg>
+                  Edit &amp; Resubmit
+                </button>
               </div>
               <div class="card-body">
-                <p class="rejection-text">{{ report()!.rejectionReason }}</p>
+                @if (report()!.rejectionReason) {
+                  <p class="rejection-text">{{ report()!.rejectionReason }}</p>
+                } @else {
+                  <p class="rejection-text rejection-text-muted">This report was rejected. Edit your data and resubmit for review.</p>
+                }
               </div>
             </div>
           }
@@ -396,52 +418,249 @@ interface ReportDetail {
       transform: translateY(-2px);
     }
 
-    .detail-header {
-      background: white;
-      border-radius: 16px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    .detail-nav {
+      margin-bottom: 1.25rem;
     }
 
     .btn-back {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      background: #f7fafc;
-      color: #2d3748;
-      border: none;
-      border-radius: 10px;
+      gap: 0.875rem;
+      padding: 0.625rem 1.25rem 0.625rem 0.625rem;
+      background: rgba(255, 255, 255, 0.14);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 999px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
-      margin-bottom: 1.5rem;
+      transition: all 0.25s ease;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .btn-back:hover {
-      background: #e2e8f0;
-      transform: translateX(-5px);
+      background: rgba(255, 255, 255, 0.24);
+      border-color: rgba(255, 255, 255, 0.45);
+      transform: translateY(-2px);
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
     }
 
-    .header-content {
+    .btn-back:active {
+      transform: translateY(0);
+    }
+
+    .btn-back-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: white;
+      color: #667eea;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+      transition: transform 0.25s ease;
+    }
+
+    .btn-back:hover .btn-back-icon {
+      transform: translateX(-3px);
+    }
+
+    .btn-back-copy {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.1rem;
+      padding-right: 0.5rem;
+    }
+
+    .btn-back-eyebrow {
+      font-size: 0.625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.72);
+      line-height: 1;
+    }
+
+    .btn-back-label {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: white;
+      line-height: 1.2;
+    }
+
+    .detail-header {
+      background: white;
+      border-radius: 20px;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-accent {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+    }
+
+    .hero-body {
+      padding: 2rem;
+    }
+
+    .hero-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-user {
+      display: flex;
+      align-items: center;
       gap: 1rem;
     }
 
-    .header-content h1 {
-      font-size: 2rem;
+    .hero-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.375rem;
       font-weight: 800;
-      color: #1a202c;
-      margin: 0 0 0.5rem 0;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
     }
 
-    .report-period {
-      color: #718096;
-      font-size: 1rem;
+    .hero-user-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #a0aec0;
+    }
+
+    .hero-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #1a202c;
       margin: 0;
+      line-height: 1.2;
+    }
+
+    .hero-role-chip {
+      display: inline-flex;
+      align-self: flex-start;
+      padding: 0.25rem 0.75rem;
+      background: #edf2f7;
+      color: #4a5568;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .hero-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
+      margin: 1.5rem 0;
+    }
+
+    .hero-bottom {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero-week-display {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .hero-period-heading {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+      margin-bottom: 0.375rem;
+    }
+
+    .hero-duration-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.28);
+    }
+
+    .hero-duration-chip svg {
+      opacity: 0.9;
+      flex-shrink: 0;
+    }
+
+    .hero-period-sep {
+      width: 1px;
+      height: 14px;
+      background: #cbd5e0;
+      flex-shrink: 0;
+    }
+
+    .hero-week-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #ebf4ff 0%, #e9d8fd 100%);
+      color: #553c9a;
+      font-size: 1.125rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .hero-week-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #718096;
+      margin: 0;
+    }
+
+    .hero-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #1a202c;
+      margin: 0;
+      line-height: 1.2;
     }
 
     .status-badge {
@@ -454,10 +673,10 @@ interface ReportDetail {
       white-space: nowrap;
     }
 
-    .status-0 { background: #feebc8; color: #7c2d12; }
-    .status-1 { background: #bee3f8; color: #2c5282; }
-    .status-2 { background: #c6f6d5; color: #22543d; }
-    .status-3 { background: #fed7d7; color: #742a2a; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-approved { background: #d1fae5; color: #065f46; }
+    .status-rejected { background: #fee2e2; color: #991b1b; }
+    .status-unknown { background: #f3f4f6; color: #4b5563; }
 
     .detail-content {
       display: grid;
@@ -495,30 +714,6 @@ interface ReportDetail {
       padding: 1.5rem;
     }
 
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 0;
-      border-bottom: 1px solid #e2e8f0;
-    }
-
-    .info-row:last-child {
-      border-bottom: none;
-    }
-
-    .info-row .label {
-      font-weight: 600;
-      color: #718096;
-      font-size: 0.875rem;
-    }
-
-    .info-row .value {
-      font-weight: 700;
-      color: #1a202c;
-      font-size: 1rem;
-    }
-
     .activity-body {
       padding: 1.25rem;
     }
@@ -541,6 +736,7 @@ interface ReportDetail {
     .farm-panel {
       background: linear-gradient(160deg, #ebf8ff 0%, #f0fff4 100%);
       border: 1px solid #bee3f8;
+      min-height: 0;
     }
 
     .training-panel {
@@ -592,6 +788,38 @@ interface ReportDetail {
       align-items: stretch;
       gap: 0.75rem;
       flex-wrap: wrap;
+    }
+
+    .farm-metrics-card {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      background: white;
+      border-radius: 12px;
+      padding: 1rem 1.125rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(44, 82, 130, 0.1);
+      gap: 0;
+    }
+
+    .farm-metrics-stats {
+      display: flex;
+      align-items: stretch;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .farm-metrics-card .metric-hero {
+      flex: 1;
+      min-width: 100px;
+      background: linear-gradient(135deg, #ebf8ff 0%, #f0fff4 100%);
+      box-shadow: none;
+      border: 1px solid rgba(44, 82, 130, 0.12);
+    }
+
+    .farm-metrics-card .metric-pill {
+      flex: 1;
+      min-width: 100px;
+      background: rgba(235, 248, 255, 0.5);
     }
 
     .metric-hero {
@@ -706,6 +934,225 @@ interface ReportDetail {
     .cat-gap { background: #e9d8fd; color: #553c9a; }
     .cat-gep { background: #fed7d7; color: #742a2a; }
     .cat-gsp { background: #fef5e7; color: #975a16; }
+
+    .farmers-records-block {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      flex: 1;
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(44, 82, 130, 0.15);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .farmers-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.65rem 0.875rem;
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom: 1px solid rgba(44, 82, 130, 0.12);
+      flex-shrink: 0;
+    }
+
+    .farmers-section-title {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.45px;
+      color: #4a5568;
+    }
+
+    .farmers-section-count {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 50px;
+      background: #ebf8ff;
+      color: #2c5282;
+      border: 1px solid rgba(44, 82, 130, 0.15);
+    }
+
+    .farmers-records-scroll {
+      position: relative;
+      max-height: min(280px, 36vh);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0.25rem 0.5rem 0.5rem;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .farmers-records-scroll::after {
+      content: '';
+      position: sticky;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: block;
+      height: 1.25rem;
+      margin-top: -1.25rem;
+      pointer-events: none;
+      background: linear-gradient(to bottom, transparent, rgba(235, 248, 255, 0.95));
+    }
+
+    .farmers-records-scroll:focus {
+      outline: 2px solid rgba(44, 82, 130, 0.35);
+      outline-offset: -2px;
+    }
+
+    .farmers-records-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .farmers-records-scroll::-webkit-scrollbar-track {
+      background: rgba(44, 82, 130, 0.06);
+      border-radius: 3px;
+    }
+
+    .farmers-records-scroll::-webkit-scrollbar-thumb {
+      background: rgba(44, 82, 130, 0.28);
+      border-radius: 3px;
+    }
+
+    .farmers-records-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(44, 82, 130, 0.45);
+    }
+
+    .farmers-records-list {
+      max-height: none;
+      overflow: visible;
+      gap: 0;
+    }
+
+    .farmers-records-list .farmer-record-item {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(44, 82, 130, 0.08);
+      border-radius: 0;
+      padding: 0.45rem 0.375rem;
+    }
+
+    .farmer-record-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .farmer-record-item:last-child {
+      border-bottom: none;
+    }
+
+    .farmer-record-item:hover {
+      background: rgba(235, 248, 255, 0.55);
+    }
+
+    .farmer-record-index {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      background: rgba(44, 82, 130, 0.08);
+      color: #2c5282;
+      font-size: 0.625rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.1rem;
+    }
+
+    .farmer-record-lines {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .farmer-record-primary {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      min-width: 0;
+    }
+
+    .farmer-record-name {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: #1a202c;
+      line-height: 1.25;
+    }
+
+    .farmer-chip {
+      display: inline-flex;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      background: rgba(44, 82, 130, 0.07);
+      color: #4a5568;
+      font-size: 0.625rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .farmer-chip-date {
+      background: rgba(102, 126, 234, 0.1);
+      color: #553c9a;
+    }
+
+    .farmer-record-title {
+      display: flex;
+      align-items: baseline;
+      gap: 0.35rem;
+      margin: 0;
+      min-width: 0;
+      line-height: 1.3;
+    }
+
+    .farmer-title-k {
+      flex-shrink: 0;
+      font-size: 0.5625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #a0aec0;
+    }
+
+    .farmer-title-v {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: #553c9a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .farmers-scroll-hint {
+      margin: 0;
+      padding: 0.4rem 0.875rem 0.55rem;
+      font-size: 0.6875rem;
+      color: #718096;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.85);
+      border-top: 1px dashed rgba(44, 82, 130, 0.15);
+      flex-shrink: 0;
+    }
+
+    .meta-tag {
+      font-weight: 600;
+      color: #4a5568;
+    }
+
+    .list-item-notes {
+      margin: 0.5rem 0 0;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      color: #718096;
+      font-style: italic;
+    }
 
     .panel-list {
       list-style: none;
@@ -850,6 +1297,46 @@ interface ReportDetail {
       color: #742a2a;
     }
 
+    .rejection-header {
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .rejection-header-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-resubmit {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 1rem;
+      background: white;
+      color: #991b1b;
+      border: 1.5px solid rgba(153, 27, 27, 0.25);
+      border-radius: 10px;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(153, 27, 27, 0.12);
+    }
+
+    .btn-resubmit:hover {
+      background: #fff5f5;
+      border-color: #f87171;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(153, 27, 27, 0.18);
+    }
+
+    .rejection-text-muted {
+      font-style: italic;
+      opacity: 0.9;
+    }
+
     .rejection-text {
       color: #742a2a;
       font-size: 1rem;
@@ -866,16 +1353,36 @@ interface ReportDetail {
         padding: 1rem;
       }
 
+      .detail-nav {
+        margin-bottom: 1rem;
+      }
+
+      .btn-back-copy {
+        padding-right: 0.25rem;
+      }
+
+      .btn-back-label {
+        font-size: 0.875rem;
+      }
+
       .detail-content {
         grid-template-columns: 1fr;
       }
 
-      .header-content {
+      .hero-top {
         flex-direction: column;
       }
 
-      .header-content h1 {
-        font-size: 1.5rem;
+      .hero-title {
+        font-size: 1.375rem;
+      }
+
+      .hero-period-heading {
+        gap: 0.5rem;
+      }
+
+      .hero-duration-chip {
+        font-size: 0.6875rem;
       }
 
       .stats-grid {
@@ -884,6 +1391,10 @@ interface ReportDetail {
 
       .activity-duo {
         grid-template-columns: 1fr;
+      }
+
+      .farmers-records-scroll {
+        max-height: min(200px, 28vh);
       }
 
       .training-stats-row {
@@ -920,6 +1431,14 @@ export class ReportDetailComponent implements OnInit {
     return 'Field Officer';
   });
 
+  userInitials = computed(() => {
+    const name = this.report()?.userName?.trim() || '';
+    if (!name) return '?';
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  });
+
   farmersVisitedCount = computed(() => {
     const report = this.report();
     if (report?.farmersVisitedCount !== undefined) {
@@ -948,6 +1467,19 @@ export class ReportDetailComponent implements OnInit {
   farmVisitsList = computed(() => this.report()?.farmerVisits ?? []);
 
   farmVisitsCount = computed(() => this.farmVisitsList().length);
+
+  farmVisitSharedTitle = computed(() => {
+    const visits = this.farmVisitsList();
+    if (visits.length === 0) return '';
+    const first = visits[0];
+    return (first.title || first.topic || '').trim();
+  });
+
+  getVisitTitle(visit: FarmerVisit): string {
+    const ownTitle = (visit.title || visit.topic || '').trim();
+    if (ownTitle) return ownTitle;
+    return this.farmVisitSharedTitle();
+  }
 
   trainingSessionsList = computed(() => this.report()?.trainingSessions ?? []);
 
@@ -1032,33 +1564,29 @@ export class ReportDetailComponent implements OnInit {
     return `${this.formatDate(start)} - ${this.formatDate(end)}`;
   }
 
-  getStatusText(status: number): string {
-    const statusMap: { [key: number]: string } = {
-      0: 'Pending',
-      1: 'Under Review',
-      2: 'Approved',
-      3: 'Rejected'
-    };
-    return statusMap[status] ?? 'Unknown';
+  getStatusText(status: number | string): string {
+    return getFoReportStatusLabel(status);
   }
 
-  getStatusClass(status: number): string {
-    return String(status);
+  getStatusClass(status: number | string): string {
+    return getFoReportStatusClass(status);
   }
 
   getCategoryLabel(category: number | string | null | undefined): string {
     const n = Number(category);
-    if (n === 1) return 'GAP';
-    if (n === 2) return 'GEP';
-    if (n === 3) return 'GSP';
-    return String(category ?? '');
+    if (n === 0) return 'GAP';
+    if (n === 1) return 'GEP';
+    if (n === 2) return 'GSP';
+    if (typeof category === 'string' && ['GAP', 'GEP', 'GSP'].includes(category)) {
+      return category;
+    }
+    return '';
   }
 
   getCategoryKey(category: number | string | null | undefined): string {
-    const n = Number(category);
-    if (n === 1) return 'gap';
-    if (n === 2) return 'gep';
-    if (n === 3) return 'gsp';
+    const label = this.getCategoryLabel(category);
+    if (label === 'GEP') return 'gep';
+    if (label === 'GSP') return 'gsp';
     return 'gap';
   }
 
@@ -1081,5 +1609,14 @@ export class ReportDetailComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/fo/my-reports']);
+  }
+
+  isReportRejected(): boolean {
+    return getFoDisplayStatus(this.report()?.status) === 'rejected';
+  }
+
+  goToResubmit(): void {
+    if (!this.reportId) return;
+    this.router.navigate(['/fo/resubmit-report', this.reportId]);
   }
 }

@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, DownloadOptions } from '../../core/models';
+import { ReportUiStatusFilter } from '../../core/utils/fo-report-status.util';
 
 @Component({
   selector: 'app-reports',
@@ -81,9 +82,47 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
           ">
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:800;color:#1A1A1A;">{{ subordinateLabel() }} Details</h2>
-              <p style="margin:4px 0 0;font-size:12px;color:#9CA3AF;">{{ filteredSubordinates().length }} records{{ canViewDetails() ? ' · Click any row to view details' : '' }}</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#9CA3AF;">{{ filteredCount() }} records{{ canViewDetails() ? ' · Use View More for full details' : '' }}</p>
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <!-- Status filter -->
+              <div style="display:flex;align-items:center;gap:6px;">
+                <label for="statusFilter" style="font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.4px;">Status</label>
+                <select
+                  id="statusFilter"
+                  class="rpt-filter-select"
+                  [value]="statusFilter()"
+                  (change)="onStatusFilterChange($any($event.target).value)"
+                  style="
+                    padding:8px 32px 8px 12px;border-radius:10px;border:1.5px solid #E5E7EB;
+                    background:white;font-size:13px;font-weight:600;color:#374151;cursor:pointer;outline:none;
+                    min-width:140px;
+                  "
+                >
+                  <option value="all">All statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <!-- Search filter -->
+              <div style="position:relative;">
+                <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;" width="14" height="14" viewBox="0 0 20 20" fill="#9CA3AF">
+                  <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                </svg>
+                <input
+                  type="search"
+                  class="rpt-search"
+                  placeholder="Search by name..."
+                  [value]="searchQuery()"
+                  (input)="onSearchInput($any($event.target).value)"
+                  style="
+                    padding:8px 12px 8px 34px;border-radius:10px;border:1.5px solid #E5E7EB;
+                    background:#F9FAFB;font-size:13px;font-weight:500;color:#374151;outline:none;
+                    min-width:180px;transition:border-color 0.2s,background 0.2s;
+                  "
+                />
+              </div>
               <!-- Approved badge -->
               <div style="
                 padding:6px 12px; background:#DCFCE7; border:1px solid #BBF7D0;
@@ -164,36 +203,21 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
             <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr style="background:#F8FAFC;">
-                  <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">
-                    <svg style="display:inline;margin-right:4px;vertical-align:middle;" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                  </th>
                   <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Full Name</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Farmers</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#228A22;text-transform:uppercase;letter-spacing:0.5px;">GAP</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#0EA5E9;text-transform:uppercase;letter-spacing:0.5px;">GEP</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#8B5CF6;text-transform:uppercase;letter-spacing:0.5px;">GSP</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;min-width:120px;">Action</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;min-width:200px;">Status / Action</th>
                 </tr>
               </thead>
               <tbody>
                 @for (sub of pagedSubordinates(); track sub.userId; let i = $index) {
-                  <!-- Main row -->
                   <tr
-                    (click)="goToDetails(sub)"
                     class="table-row-hover"
                     [style]="rowStyle(sub, i)"
                   >
-                    <td style="padding:14px 16px;">
-                      <div style="
-                        width:22px;height:22px;border-radius:6px;
-                        background:#F3F4F6;display:flex;align-items:center;justify-content:center;
-                        transition:transform 0.2s;
-                      " [style.transform]="sub.isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'">
-                        <svg width="12" height="12" viewBox="0 0 20 20" fill="#6B7280">
-                          <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-                        </svg>
-                      </div>
-                    </td>
                     <td style="padding:14px 16px;">
                       <div style="display:flex;align-items:center;gap:10px;">
                         <div style="
@@ -232,8 +256,33 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
                         background:#EDE9FE;padding:3px 10px;border-radius:8px;
                       ">{{ sub.gspCount }}</span>
                     </td>
+                    <td style="padding:10px 16px;text-align:center;">
+                      @if (canViewDetails()) {
+                        <button
+                          type="button"
+                          class="btn-view-more"
+                          (click)="goToDetails(sub)"
+                          style="
+                            display:inline-flex;align-items:center;gap:5px;
+                            padding:7px 14px;background:linear-gradient(135deg,#8B2D73,#D047AE);
+                            color:white;border:none;border-radius:10px;
+                            font-size:11px;font-weight:700;cursor:pointer;
+                            box-shadow:0 2px 8px rgba(208,71,174,0.3);
+                            transition:transform 0.2s,box-shadow 0.2s;
+                          "
+                        >
+                          <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                          </svg>
+                          View More
+                        </button>
+                      } @else {
+                        <span style="font-size:11px;color:#9CA3AF;">—</span>
+                      }
+                    </td>
                     <!-- Multipurpose Status / Action cell -->
-                    <td style="padding:10px 16px;text-align:center;" (click)="$event.stopPropagation()">
+                    <td style="padding:10px 16px;text-align:center;">
                       @if (sub.status === 'approved') {
                         <span style="
                           display:inline-flex;align-items:center;gap:5px;
@@ -321,7 +370,7 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
           </div>
 
           <!-- Empty state -->
-          @if (filteredSubordinates().length === 0) {
+          @if (pagedSubordinates().length === 0) {
             <div style="padding:48px;text-align:center;color:#9CA3AF;">
               <svg width="48" height="48" viewBox="0 0 20 20" fill="#E5E7EB" style="display:block;margin:0 auto 12px;">
                 <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
@@ -330,13 +379,13 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
             </div>
           }
           <!-- Pagination -->
-          @if (!loading() && totalPages() > 1) {
+          @if (!loading() && totalPagesComputed() > 1) {
             <div style="
               display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
               padding:16px 24px;border-top:1px solid #F3F4F6;background:#FAFAFA;
             ">
               <span style="font-size:12px;color:#9CA3AF;font-weight:500;">
-                Showing {{ (currentPage()-1)*pageSize + 1 }}–{{ currentPage()*pageSize > filteredSubordinates().length ? filteredSubordinates().length : currentPage()*pageSize }} of {{ filteredSubordinates().length }}
+                Showing {{ rangeStart() }}–{{ rangeEnd() }} of {{ filteredCount() }}
               </span>
               <div style="display:flex;align-items:center;gap:4px;">
                 <button
@@ -353,9 +402,9 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
                 }
                 <button
                   (click)="nextPage()"
-                  [disabled]="currentPage() === totalPages()"
-                  [style.opacity]="currentPage() === totalPages() ? '0.4' : '1'"
-                  [style.cursor]="currentPage() === totalPages() ? 'not-allowed' : 'pointer'"
+                  [disabled]="currentPage() === totalPagesComputed()"
+                  [style.opacity]="currentPage() === totalPagesComputed() ? '0.4' : '1'"
+                  [style.cursor]="currentPage() === totalPagesComputed() ? 'not-allowed' : 'pointer'"
                   style="width:34px;height:34px;border:1.5px solid #E5E7EB;border-radius:8px;background:white;color:#374151;display:flex;align-items:center;justify-content:center;transition:all 0.2s;"
                 >
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
@@ -477,6 +526,8 @@ import { DashboardSummary, SubordinateReport, ROLE_LABELS, ROLE_SUBORDINATE, Dow
       @keyframes popIn { from { opacity:0; transform:scale(0.92) translateY(-4px); } to { opacity:1; transform:scale(1) translateY(0); } }
       .table-row-hover:hover td { background:#FDF2FB !important; }
       .rpt-search:focus { border-color: #E068C4 !important; background: white !important; }
+      .rpt-filter-select:focus { border-color: #E068C4 !important; box-shadow: 0 0 0 3px rgba(208,71,174,0.12); }
+      .btn-view-more:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(208,71,174,0.4) !important; }
       .rpt-dl-btn:hover { background: linear-gradient(135deg,#7B1F63 0%,#C2389A 100%) !important; box-shadow: 0 8px 24px rgba(208,71,174,0.55) !important; transform: translateY(-2px); }
       .dl-menu-item {
         display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;
@@ -506,10 +557,11 @@ export class ReportsComponent implements OnInit {
   showDownloadMenu = signal(false);
 
   searchQuery = signal('');
-  filterStatus = signal('');
-  filterCategory = signal('');
-  dateFrom = signal('');
-  dateTo = signal('');
+  statusFilter = signal<ReportUiStatusFilter>('all');
+  subordinates = signal<SubordinateReport[]>([]);
+  pendingCache = signal<SubordinateReport[]>([]);
+  totalCount = signal(0);
+  apiTotalPages = signal(1);
 
   role = this.authService.currentRole;
   roleLabel = computed(() => {
@@ -521,37 +573,66 @@ export class ReportsComponent implements OnInit {
   canViewDetails = computed(() => this.role() === 'FC');
 
   filteredSubordinates = computed(() => {
-    const s = this.summary();
-    if (!s) return [];
-    const query = this.searchQuery().toLowerCase();
-    const status = this.filterStatus();
-    const category = this.filterCategory();
-    const from = this.dateFrom();
-    const to = this.dateTo();
-    return s.subordinates.filter(sub => {
-      const matchName = !query || sub.fullName.toLowerCase().includes(query);
-      const matchStatus = !status || sub.status === status;
-      const matchCat = !category || sub.tasks.some(t => t.category === category);
-      const matchDate = (!from && !to) || sub.tasks.some(t => {
-        const d = t.completedDate;
-        return (!from || d >= from) && (!to || d <= to);
-      });
-      return matchName && matchStatus && matchCat && matchDate;
-    });
+    const query = this.searchQuery().toLowerCase().trim();
+    const source = this.statusFilter() === 'pending'
+      ? this.pendingCache()
+      : this.subordinates();
+    if (!query) return source;
+    return source.filter(sub => sub.fullName.toLowerCase().includes(query));
+  });
+
+  filteredCount = computed(() => {
+    if (this.statusFilter() === 'pending') {
+      return this.filteredSubordinates().length;
+    }
+    return this.totalCount();
   });
 
   readonly pageSize = 10;
+  readonly maxPages = 10;
   currentPage = signal(1);
-  totalPages = computed(() => Math.max(1, Math.ceil(this.filteredSubordinates().length / this.pageSize)));
-  pageNumbers = computed(() => Array.from({ length: this.totalPages() }, (_, i) => i + 1));
-  pagedSubordinates = computed(() => {
-    const items = this.filteredSubordinates();
-    const page = Math.min(this.currentPage(), this.totalPages());
-    const start = (page - 1) * this.pageSize;
-    return items.slice(start, start + this.pageSize);
+
+  totalPagesComputed = computed(() => {
+    if (this.statusFilter() === 'pending') {
+      const count = this.filteredSubordinates().length;
+      return Math.min(this.maxPages, Math.max(1, Math.ceil(count / this.pageSize)));
+    }
+    return Math.min(this.maxPages, this.apiTotalPages());
   });
 
-  setPage(page: number): void { this.currentPage.set(Math.max(1, Math.min(page, this.totalPages()))); }
+  pageNumbers = computed(() => Array.from({ length: this.totalPagesComputed() }, (_, i) => i + 1));
+
+  pagedSubordinates = computed(() => {
+    const items = this.filteredSubordinates();
+    const page = Math.min(this.currentPage(), this.totalPagesComputed());
+    const start = (page - 1) * this.pageSize;
+    if (this.statusFilter() === 'pending') {
+      return items.slice(start, start + this.pageSize);
+    }
+    return items;
+  });
+
+  rangeStart = computed(() => {
+    if (this.filteredCount() === 0) return 0;
+    return (this.currentPage() - 1) * this.pageSize + 1;
+  });
+
+  rangeEnd = computed(() => {
+    const end = this.currentPage() * this.pageSize;
+    const visible = this.pagedSubordinates().length;
+    if (this.statusFilter() === 'pending') {
+      return (this.currentPage() - 1) * this.pageSize + visible;
+    }
+    return Math.min(end, this.filteredCount());
+  });
+
+  setPage(page: number): void {
+    const next = Math.max(1, Math.min(page, this.totalPagesComputed()));
+    this.currentPage.set(next);
+    if (this.statusFilter() !== 'pending') {
+      this.loadReports();
+    }
+  }
   prevPage(): void { this.setPage(this.currentPage() - 1); }
   nextPage(): void { this.setPage(this.currentPage() + 1); }
 
@@ -562,10 +643,65 @@ export class ReportsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.dashboardService.getReports(this.role()!).subscribe(data => {
-      this.summary.set(data);
+    this.loadReports();
+  }
+
+  loadReports(): void {
+    const role = this.role();
+    if (!role) {
       this.loading.set(false);
+      return;
+    }
+
+    this.loading.set(true);
+    const filter = this.statusFilter();
+
+    this.dashboardService.getReportsPage(role, this.currentPage(), this.pageSize, filter).subscribe({
+      next: (page) => {
+        if (filter === 'pending') {
+          this.pendingCache.set(page.subordinates);
+          this.subordinates.set([]);
+          this.totalCount.set(page.totalCount);
+        } else {
+          this.subordinates.set(page.subordinates);
+          this.pendingCache.set([]);
+          this.totalCount.set(page.totalCount);
+          this.apiTotalPages.set(page.totalPages);
+        }
+
+        this.summary.update(s => ({
+          totalSubordinates: page.totalCount,
+          reportSubmittedCount: page.subordinates.length,
+          allSubmitted: false,
+          totalFarmersVisited: page.subordinates.reduce((sum, r) => sum + r.farmersVisited, 0),
+          totalGAP: page.subordinates.reduce((sum, r) => sum + r.gapCount, 0),
+          totalGEP: page.subordinates.reduce((sum, r) => sum + r.gepCount, 0),
+          totalGSP: page.subordinates.reduce((sum, r) => sum + r.gspCount, 0),
+          pendingApprovals: page.pendingApprovals,
+          approvedCount: page.approvedCount,
+          canApprove: s?.canApprove ?? false,
+          isWeeklyReportSent: s?.isWeeklyReportSent ?? false,
+          lastUpdated: new Date().toISOString(),
+          subordinates: page.subordinates,
+        }));
+
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+      }
     });
+  }
+
+  onStatusFilterChange(value: ReportUiStatusFilter): void {
+    this.statusFilter.set(value);
+    this.currentPage.set(1);
+    this.loadReports();
+  }
+
+  onSearchInput(value: string): void {
+    this.searchQuery.set(value);
+    this.currentPage.set(1);
   }
 
 
@@ -598,11 +734,10 @@ export class ReportsComponent implements OnInit {
   }
 
   rowStyle(sub: SubordinateReport, i: number): string {
-    const base = sub.isExpanded ? '#FDF2FB' : (i % 2 === 0 ? 'white' : '#FAFAFA');
+    const base = i % 2 === 0 ? 'white' : '#FAFAFA';
     const isPending = sub.status !== 'approved' && sub.status !== 'rejected';
-    const cursor = this.canViewDetails() ? 'pointer' : 'default';
     return `
-      background:${base};cursor:${cursor};
+      background:${base};
       border-bottom:1px solid #F3F4F6;
       transition:background 0.15s;
       ${isPending ? 'border-left:3px solid #F59E0B;' : ''}
@@ -669,11 +804,11 @@ export class ReportsComponent implements OnInit {
         this.actioningSubId.set(null);
         this.approveModal.set(null);
         this.showToast(true, res.message || 'Report approved successfully.');
+        this.loadReports();
       },
       error: (err) => {
         this.actioningSubId.set(null);
         this.approveModal.set(null);
-        this.showToast(false, err?.error?.message || 'Approval failed. Please try again.');
       }
     });
   }
@@ -684,6 +819,7 @@ export class ReportsComponent implements OnInit {
   }
 
   closeRejectModal(): void {
+    if (this.actioningSubId() !== null) return;
     this.rejectModal.set(null);
     this.rejectReason.set('');
   }
@@ -693,8 +829,7 @@ export class ReportsComponent implements OnInit {
     const reason = this.rejectReason().trim();
     if (!modal || !reason) return;
     this.actioningSubId.set(modal.subId);
-    const approverName = this.authService.currentUser()?.fullName ?? 'Unknown';
-    this.dashboardService.rejectOne(modal.subId, reason, approverName).subscribe({
+    this.dashboardService.rejectOne(modal.subId, reason).subscribe({
       next: (res) => {
         this.summary.update(s => {
           if (!s) return s;
@@ -708,11 +843,11 @@ export class ReportsComponent implements OnInit {
         });
         this.actioningSubId.set(null);
         this.closeRejectModal();
-        this.showToast(true, res.message || 'Report rejected.');
+        this.showToast(true, res.message || 'Report rejected successfully.');
+        this.loadReports();
       },
-      error: (err) => {
+      error: () => {
         this.actioningSubId.set(null);
-        this.showToast(false, err?.error?.message || 'Rejection failed. Please try again.');
       }
     });
   }

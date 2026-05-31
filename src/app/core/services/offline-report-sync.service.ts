@@ -1,10 +1,11 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
-import { SKIP_ERROR_TOAST } from '../tokens';
+import { SKIP_GLOBAL_ERROR_HANDLING } from '../tokens';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
+import { extractErrorMessage } from '../utils/http-error.util';
 import {
   QueuedReportSummary,
   QueuedWeeklyReport,
@@ -60,7 +61,7 @@ export class OfflineReportSyncService {
         await this.enqueue(payload);
         return 'queued';
       }
-      throw err;
+      throw new Error(extractErrorMessage(err));
     }
   }
 
@@ -165,7 +166,7 @@ export class OfflineReportSyncService {
       await this.postFromQueued(report);
       await this.idbDelete(id);
     } catch (err) {
-      const message = this.extractErrorMessage(err);
+      const message = extractErrorMessage(err);
       await this.idbUpdate({
         ...report,
         status: 'failed',
@@ -178,7 +179,7 @@ export class OfflineReportSyncService {
 
   private async postToApi(payload: WeeklyReportSubmitPayload): Promise<void> {
     const formData = this.buildFormData(payload);
-    const context = new HttpContext().set(SKIP_ERROR_TOAST, true);
+    const context = new HttpContext().set(SKIP_GLOBAL_ERROR_HANDLING, true);
     await firstValueFrom(
       this.http.post(`${environment.apiUrl}/api/Reports`, formData, { context })
     );
@@ -246,12 +247,6 @@ export class OfflineReportSyncService {
   private isNetworkError(err: unknown): boolean {
     const e = err as { status?: number; statusText?: string };
     return e?.status === 0 || !navigator.onLine;
-  }
-
-  private extractErrorMessage(err: unknown): string {
-    const e = err as { error?: { message?: string }; message?: string; status?: number };
-    if (e?.status === 401) return 'Session expired. Please log in again and retry.';
-    return e?.error?.message ?? e?.message ?? 'Failed to submit report.';
   }
 
   private openDatabase(): Promise<IDBDatabase> {

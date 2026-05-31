@@ -157,6 +157,16 @@ export interface DashboardSummary {
   subordinates: SubordinateReport[];
 }
 
+export interface ReportsTablePage {
+  subordinates: SubordinateReport[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  approvedCount: number;
+  pendingApprovals: number;
+}
+
 // ─── Subordinates list API ─────────────────────────────────────────────────────
 export interface SubordinatesApiData {
   totalCount: number;

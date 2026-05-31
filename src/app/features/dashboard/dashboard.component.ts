@@ -546,10 +546,9 @@ export class DashboardComponent implements OnInit {
         setTimeout(() => this.approved.set(false), 3000);
         this.showToast(true, res.message || `Report successfully sent to ${this.nextRoleLabel()}.`);
       },
-      error: (err) => {
+      error: () => {
         this.approving.set(false);
         this.promoteModal.set(false);
-        this.showToast(false, err?.error?.message || 'Failed to send report. Please try again.');
       }
     });
   }

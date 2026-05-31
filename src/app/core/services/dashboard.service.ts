@@ -1,14 +1,21 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of, forkJoin } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of, forkJoin, throwError } from 'rxjs';
 import { map, delay, catchError, tap } from 'rxjs/operators';
 import * as XLSX from 'xlsx';
 import { ApiService } from './api.service';
+import { API_BASE_URL } from '../tokens';
 import {
   DashboardSummary, SubordinateReport, ApprovalStatus,
   DownloadOptions, UserRole,
   DashboardApiData, DashboardApiReport, ApiResult,
-  ROLE_READY_MAPPED_STATUS, SubordinatesApiData, ROLE_HIERARCHY
+  ROLE_READY_MAPPED_STATUS, SubordinatesApiData, ROLE_HIERARCHY,
+  ReportsTablePage
 } from '../models';
+import {
+  reportUiFilterToApiStatus,
+  ReportUiStatusFilter
+} from '../utils/fo-report-status.util';
 
 // Handles numeric enum values (default .NET serialization)
 const STATUS_MAP_NUMERIC: Record<number, ApprovalStatus> = {
@@ -37,6 +44,8 @@ const STATUS_MAP_STRING: Record<string, ApprovalStatus> = {
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private readonly api = inject(ApiService);
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = inject(API_BASE_URL);
 
   private mapStatus(status: number | string): ApprovalStatus {
     if (typeof status === 'string') {
@@ -128,38 +137,97 @@ export class DashboardService {
   }
 
   getReports(role: UserRole): Observable<DashboardSummary> {
-    // FO role should use Dashboard API, not Reports API
+    return this.getReportsPage(role, 1, 100, 'all').pipe(
+      map(page => ({
+        totalSubordinates: page.totalCount,
+        reportSubmittedCount: page.subordinates.length,
+        allSubmitted: page.subordinates.length >= page.totalCount && page.totalCount > 0,
+        totalFarmersVisited: page.subordinates.reduce((sum, r) => sum + r.farmersVisited, 0),
+        totalGAP: page.subordinates.reduce((sum, r) => sum + r.gapCount, 0),
+        totalGEP: page.subordinates.reduce((sum, r) => sum + r.gepCount, 0),
+        totalGSP: page.subordinates.reduce((sum, r) => sum + r.gspCount, 0),
+        pendingApprovals: page.pendingApprovals,
+        approvedCount: page.approvedCount,
+        canApprove: false,
+        isWeeklyReportSent: false,
+        lastUpdated: new Date().toISOString(),
+        subordinates: page.subordinates,
+      } as DashboardSummary))
+    );
+  }
+
+  getReportsPage(
+    role: UserRole,
+    pageNumber: number,
+    pageSize: number,
+    statusFilter: ReportUiStatusFilter = 'all'
+  ): Observable<ReportsTablePage> {
     if (role === 'FO') {
-      return this.getDashboard(role);
+      return this.getDashboard(role).pipe(
+        map(summary => ({
+          subordinates: summary.subordinates,
+          totalCount: summary.subordinates.length,
+          pageNumber: 1,
+          pageSize,
+          totalPages: 1,
+          approvedCount: summary.approvedCount,
+          pendingApprovals: summary.pendingApprovals,
+        }))
+      );
     }
 
-    // Other roles use Reports API with pagination
-    return this.api.get<ApiResult<{ items: DashboardApiReport[]; totalCount: number }>>(
-      '/api/Reports?PageNumber=1&PageSize=100'
-    ).pipe(
+    const apiStatus = reportUiFilterToApiStatus(statusFilter);
+    const fetchPage = statusFilter === 'pending' ? 1 : pageNumber;
+    const fetchSize = statusFilter === 'pending' ? 100 : pageSize;
+    let url = `/api/Reports?PageNumber=${fetchPage}&PageSize=${fetchSize}`;
+    if (apiStatus !== undefined) {
+      url += `&status=${apiStatus}`;
+    }
+
+    return this.api.get<ApiResult<{ items: DashboardApiReport[]; totalCount: number }>>(url).pipe(
       map(res => {
         const items = res.data?.items ?? [];
         const idx = ROLE_HIERARCHY.indexOf(role);
         const subordinateRole: UserRole = idx > 0 ? ROLE_HIERARCHY[idx - 1] : 'FO';
-        const subordinates = items.map(r => this.mapReport(r, subordinateRole));
+        let subordinates = items.map(r => this.mapReport(r, subordinateRole));
+
+        if (statusFilter === 'pending') {
+          subordinates = subordinates.filter(
+            s => s.status !== 'approved' && s.status !== 'rejected'
+          );
+        }
+
+        const apiTotal = res.data?.totalCount ?? items.length;
+        const totalCount = statusFilter === 'pending'
+          ? subordinates.length
+          : apiTotal;
+        const totalPages = Math.min(10, Math.max(1, Math.ceil(totalCount / pageSize)));
         const approvedCount = subordinates.filter(s => s.status === 'approved').length;
-        const pendingApprovals = subordinates.filter(s => s.status !== 'approved' && s.status !== 'rejected').length;
-        const totalCount = res.data?.totalCount ?? items.length;
+        const pendingApprovals = subordinates.filter(
+          s => s.status !== 'approved' && s.status !== 'rejected'
+        ).length;
+
         return {
-          totalSubordinates: totalCount,
-          reportSubmittedCount: items.length,
-          allSubmitted: items.length >= totalCount && totalCount > 0,
-          totalFarmersVisited: items.reduce((sum, r) => sum + r.farmersVisited, 0),
-          totalGAP: items.reduce((sum, r) => sum + r.gapCount, 0),
-          totalGEP: items.reduce((sum, r) => sum + r.gepCount, 0),
-          totalGSP: items.reduce((sum, r) => sum + r.gspCount, 0),
-          pendingApprovals,
-          approvedCount,
-          canApprove: false,
-          isWeeklyReportSent: false,
-          lastUpdated: new Date().toISOString(),
           subordinates,
-        } as DashboardSummary;
+          totalCount,
+          pageNumber: statusFilter === 'pending' ? pageNumber : pageNumber,
+          pageSize,
+          totalPages,
+          approvedCount,
+          pendingApprovals,
+        };
+      }),
+      catchError((error) => {
+        console.error('Reports page error:', error);
+        return of({
+          subordinates: [],
+          totalCount: 0,
+          pageNumber: 1,
+          pageSize,
+          totalPages: 1,
+          approvedCount: 0,
+          pendingApprovals: 0,
+        });
       })
     );
   }
@@ -175,10 +243,49 @@ export class DashboardService {
     );
   }
 
-  rejectOne(reportId: string, reason: string, approverName: string): Observable<{ success: boolean; message: string }> {
-    return this.api.post<ApiResult<unknown>>(`/api/Dashboard/reject/${reportId}`, { reason, approverName }).pipe(
-      map(r => ({ success: r.success, message: r.message ?? 'Rejected.' }))
+  rejectOne(reportId: string, reason: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post(
+      `${this.baseUrl}/api/Reports/${reportId}/reject`,
+      { reason },
+      {
+        headers: {
+          Accept: 'text/plain, application/json',
+          'Content-Type': 'application/json'
+        },
+        responseType: 'text'
+      }
+    ).pipe(
+      map(response => this.parseActionResponse(response, 'Report rejected successfully.')),
+      catchError(err => throwError(() => this.normalizeActionError(err, 'Rejection failed. Please try again.')))
     );
+  }
+
+  private parseActionResponse(response: string, fallbackMessage: string): { success: boolean; message: string } {
+    const trimmed = (response ?? '').trim();
+    if (!trimmed) {
+      return { success: true, message: fallbackMessage };
+    }
+
+    if (trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed) as ApiResult<unknown>;
+        return {
+          success: parsed.success ?? true,
+          message: parsed.message ?? fallbackMessage
+        };
+      } catch {
+        return { success: true, message: trimmed };
+      }
+    }
+
+    return { success: true, message: trimmed };
+  }
+
+  private normalizeActionError(err: any, fallbackMessage: string): { error: { message: string } } {
+    const message = typeof err?.error === 'string' && err.error.trim()
+      ? err.error.trim()
+      : err?.error?.message ?? fallbackMessage;
+    return { error: { message } };
   }
 
   downloadReport(options: DownloadOptions, data: SubordinateReport[]): void {

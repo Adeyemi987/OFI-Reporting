@@ -2,15 +2,17 @@ import { Component, inject, ChangeDetectionStrategy, OnInit } from '@angular/cor
 import { RouterOutlet } from '@angular/router';
 import { Toast, ToastService } from './core/services/toast.service';
 import { OfflineReportSyncService } from './core/services/offline-report-sync.service';
+import { ErrorModalComponent } from './core/components/error-modal/error-modal.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ErrorModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <router-outlet></router-outlet>
+    <app-error-modal />
 
-    <!-- ── Global Toast Overlay ─────────────────────────────────── -->
+    <!-- ── Global Toast Overlay (success, info, non-blocking feedback) ── -->
     <div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none;width:340px;max-width:calc(100vw - 48px);">
       @for (toast of toastService.toasts(); track toast.id) {
         <div style="pointer-events:auto;display:flex;align-items:flex-start;gap:12px;padding:14px 14px 14px 14px;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.14),0 2px 8px rgba(0,0,0,0.08);animation:toastSlideIn 0.32s cubic-bezier(0.22,1,0.36,1);"

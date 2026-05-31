@@ -3,7 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FODashboardService } from '../../../core/services/fo-dashboard.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { FODashboardData } from '../../../core/models/fo-dashboard.models';
+import { FODashboardData, FORecentReport } from '../../../core/models/fo-dashboard.models';
+import {
+  getFoReportStatusClass,
+  getFoReportStatusLabel
+} from '../../../core/utils/fo-report-status.util';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-fo-dashboard',
@@ -148,7 +153,10 @@ import { FODashboardData } from '../../../core/models/fo-dashboard.models';
         <!-- Recent Reports Section -->
         <div class="recent-reports-section">
           <div class="section-header">
-            <h2>Recent Reports</h2>
+            <div>
+              <h2>Recent Reports</h2>
+              <p class="section-subtitle">Latest 5 weekly reports — summary view</p>
+            </div>
             <a routerLink="/fo/my-reports" class="view-all-link">
               View All
               <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
@@ -167,56 +175,33 @@ import { FODashboardData } from '../../../core/models/fo-dashboard.models';
               <a routerLink="/fo/create-report" class="btn-primary">Create Report</a>
             </div>
           } @else {
-            <div class="reports-list">
-              @for (report of recentReports(); track report.reportId) {
-                <div class="report-card">
-                  <div class="report-header">
-                    <div class="report-title">
-                      <h3>Week {{ report.weekNumber }}, {{ report.year }}</h3>
-                      <p class="report-date">{{ formatDateRange(report.weekStartDate, report.weekEndDate) }}</p>
-                    </div>
-                    <span [class]="'status-badge status-' + getReportStatusClass(report.status)">
-                      {{ getReportStatusLabel(report.status) }}
-                    </span>
-                  </div>
-                  
-                  <div class="report-stats">
-                    <div class="stat-item">
-                      <div class="stat-icon">
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                          <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
-                        </svg>
-                      </div>
-                      <div class="stat-content">
-                        <div class="stat-value">{{ report.farmersVisited }}</div>
-                        <div class="stat-label">Farmers Visited</div>
-                      </div>
-                    </div>
-                    
-                    <div class="stat-item">
-                      <div class="stat-icon">
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/>
-                        </svg>
-                      </div>
-                      <div class="stat-content">
-                        <div class="stat-value">{{ report.trainingSessions }}</div>
-                        <div class="stat-label">Training Sessions</div>
-                        <div class="stat-breakdown">{{ report.trainingAttendees }} attendees</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  @if (report.rejectionReason) {
-                    <div class="report-rejection">
-                      <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                      </svg>
-                      <strong>Rejection Reason:</strong> {{ report.rejectionReason }}
-                    </div>
+            <div class="table-container">
+              <table class="reports-table">
+                <thead>
+                  <tr>
+                    <th>Week</th>
+                    <th>Period</th>
+                    <th>Status</th>
+                    <th>Farmers Visited</th>
+                    <th>Training Sessions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (report of recentReports(); track report.reportId) {
+                    <tr>
+                      <td><strong>Week {{ report.weekNumber }}, {{ report.year }}</strong></td>
+                      <td>{{ formatDateRange(report.weekStartDate, report.weekEndDate) }}</td>
+                      <td>
+                        <span [class]="'status-badge status-' + getReportStatusClass(report.status)">
+                          {{ getReportStatusLabel(report.status) }}
+                        </span>
+                      </td>
+                      <td>{{ report.farmersVisited }}</td>
+                      <td>{{ report.trainingSessions }}</td>
+                    </tr>
                   }
-                </div>
-              }
+                </tbody>
+              </table>
             </div>
           }
         </div>
@@ -396,6 +381,12 @@ import { FODashboardData } from '../../../core/models/fo-dashboard.models';
       margin: 0;
     }
 
+    .section-subtitle {
+      margin: 0.35rem 0 0;
+      font-size: 0.875rem;
+      color: #718096;
+    }
+
     .view-all-link {
       display: flex;
       align-items: center;
@@ -410,44 +401,50 @@ import { FODashboardData } from '../../../core/models/fo-dashboard.models';
       gap: 0.75rem;
     }
 
-    .reports-list {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .report-card {
+    .table-container {
       background: #f7fafc;
       border-radius: 16px;
-      padding: 1.5rem;
-      transition: all 0.3s;
-      border: 2px solid transparent;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
     }
 
-    .report-card:hover {
-      background: white;
-      border-color: #667eea;
-      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+    .reports-table {
+      width: 100%;
+      border-collapse: collapse;
     }
 
-    .report-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 1rem;
+    .reports-table thead {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
     }
 
-    .report-title h3 {
-      font-size: 1.25rem;
+    .reports-table th {
+      padding: 1rem;
+      text-align: left;
       font-weight: 700;
-      color: #1a202c;
-      margin: 0 0 0.25rem 0;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
-    .report-date {
+    .reports-table tbody tr {
+      border-bottom: 1px solid #e2e8f0;
+      transition: background 0.2s;
+      background: white;
+    }
+
+    .reports-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .reports-table tbody tr:hover {
+      background: #f7fafc;
+    }
+
+    .reports-table td {
+      padding: 1rem;
+      color: #2d3748;
       font-size: 0.875rem;
-      color: #718096;
-      margin: 0;
     }
 
     .status-badge {
@@ -459,108 +456,10 @@ import { FODashboardData } from '../../../core/models/fo-dashboard.models';
       letter-spacing: 0.5px;
     }
 
-    .status-submitted { background: #bee3f8; color: #2c5282; }
-    .status-underreview { background: #feebc8; color: #7c2d12; }
-    .status-approved { background: #c6f6d5; color: #22543d; }
-    .status-rejected { background: #fed7d7; color: #742a2a; }
-
-    .report-meta {
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.75rem;
-    }
-
-    .meta-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-      color: #718096;
-    }
-
-    .report-comments {
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
-      color: #4a5568;
-      border-left: 3px solid #667eea;
-    }
-
-    .report-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .stat-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-      padding: 1rem;
-      background: white;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-    }
-
-    .stat-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      flex-shrink: 0;
-    }
-
-    .stat-content {
-      flex: 1;
-    }
-
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #1a202c;
-      line-height: 1;
-      margin-bottom: 0.25rem;
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      color: #718096;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .stat-breakdown {
-      font-size: 0.75rem;
-      color: #a0aec0;
-      margin-top: 0.25rem;
-    }
-
-    .report-rejection {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-      background: #fff5f5;
-      padding: 1rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
-      color: #742a2a;
-      border-left: 3px solid #fc8181;
-      margin-top: 1rem;
-    }
-
-    .report-rejection svg {
-      color: #fc8181;
-      flex-shrink: 0;
-      margin-top: 0.125rem;
-    }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-approved { background: #d1fae5; color: #065f46; }
+    .status-rejected { background: #fee2e2; color: #991b1b; }
+    .status-unknown { background: #f3f4f6; color: #4b5563; }
 
     .empty-state {
       text-align: center;
@@ -655,8 +554,17 @@ import { FODashboardData } from '../../../core/models/fo-dashboard.models';
         grid-template-columns: 1fr;
       }
 
-      .report-stats {
-        grid-template-columns: 1fr;
+      .table-container {
+        overflow-x: auto;
+      }
+
+      .reports-table {
+        font-size: 0.75rem;
+      }
+
+      .reports-table th,
+      .reports-table td {
+        padding: 0.75rem 0.5rem;
       }
 
       .hero-actions {
@@ -675,11 +583,11 @@ export class FODashboardComponent implements OnInit {
   private authService = inject(AuthService);
 
   dashboard = signal<FODashboardData | null>(null);
+  recentReports = signal<FORecentReport[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
 
   userName = computed(() => this.authService.currentUser()?.fullName || 'Field Officer');
-  recentReports = computed(() => this.dashboard()?.recentReports || []);
 
   ngOnInit(): void {
     this.loadDashboard();
@@ -689,9 +597,13 @@ export class FODashboardComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
-    this.foDashboardService.getFODashboard().subscribe({
-      next: (data) => {
-        this.dashboard.set(data);
+    forkJoin({
+      dashboard: this.foDashboardService.getFODashboard(),
+      recent: this.foDashboardService.getDashboardRecentReports()
+    }).subscribe({
+      next: ({ dashboard, recent }) => {
+        this.dashboard.set(dashboard);
+        this.recentReports.set(recent.items);
         this.loading.set(false);
       },
       error: (err) => {
@@ -708,6 +620,7 @@ export class FODashboardComponent implements OnInit {
           totalTrainingAttendees: 0,
           recentReports: []
         });
+        this.recentReports.set([]);
         this.loading.set(false);
       }
     });
@@ -729,33 +642,11 @@ export class FODashboardComponent implements OnInit {
     return `${this.formatDate(start)} - ${this.formatDate(end)}`;
   }
 
-  /** API may return status as number (0–3) or string — avoid .toLowerCase() on numbers. */
   getReportStatusLabel(status: string | number | null | undefined): string {
-    if (status == null) return 'Unknown';
-    if (typeof status === 'number') {
-      const labels: Record<number, string> = {
-        0: 'Pending',
-        1: 'Under Review',
-        2: 'Approved',
-        3: 'Rejected'
-      };
-      return labels[status] ?? 'Unknown';
-    }
-    return String(status);
+    return getFoReportStatusLabel(status);
   }
 
   getReportStatusClass(status: string | number | null | undefined): string {
-    if (typeof status === 'number') {
-      const classes: Record<number, string> = {
-        0: 'submitted',
-        1: 'underreview',
-        2: 'approved',
-        3: 'rejected'
-      };
-      return classes[status] ?? 'submitted';
-    }
-    return String(status ?? 'unknown')
-      .toLowerCase()
-      .replace(/\s+/g, '');
+    return getFoReportStatusClass(status);
   }
 }
