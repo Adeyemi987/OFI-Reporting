@@ -2,24 +2,16 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators, AbstractControl } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { GeolocationService } from '../../../core/services/geolocation.service';
 import { OfflineReportSyncService } from '../../../core/services/offline-report-sync.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeeklyReportSubmitPayload } from '../../../core/models/offline-report.models';
-import { debounceTime, distinctUntilChanged, firstValueFrom } from 'rxjs';
+import { debounceTime, distinctUntilChanged, merge } from 'rxjs';
 
 interface DraftData {
   formValue: any;
   currentStep: number;
   selectedFileName?: string;
   timestamp: number;
-}
-
-interface PendingLocationResolve {
-  type: 'farm' | 'training';
-  index: number;
-  latitude?: number;
-  longitude?: number;
 }
 
 @Component({
@@ -31,22 +23,20 @@ interface PendingLocationResolve {
 })
 export class CreateReportComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
-  private geoService = inject(GeolocationService);
   readonly offlineSync = inject(OfflineReportSyncService);
   private toast = inject(ToastService);
   private router = inject(Router);
 
   private readonly DRAFT_KEY = 'weekly_report_draft';
-  private readonly PENDING_LOCATIONS_KEY = 'pending_location_resolves';
   private autoSaveSubscription: any;
-  private readonly onOnline = (): void => { this.processPendingLocations(); };
 
   reportForm!: FormGroup;
   currentStep = signal(1);
   submitting = signal(false);
   selectedFile = signal<File | null>(null);
-  locationLoading = signal<{ type: 'farm' | 'training'; index: number } | null>(null);
   hasDraft = signal(false);
+  showFarmVisitSetup = signal(false);
+  canProceedToNext = signal(false);
 
   readonly categoryOptions = [
     { value: 1, label: 'GAP' },
@@ -58,12 +48,10 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     this.initForm();
     this.checkForDraft();
     this.setupAutoSave();
-    window.addEventListener('online', this.onOnline);
-    this.processPendingLocations();
+    this.setupNavigationRefresh();
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener('online', this.onOnline);
     if (this.autoSaveSubscription) {
       this.autoSaveSubscription.unsubscribe();
     }
@@ -77,10 +65,12 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       weekEndDate: ['', Validators.required],
       challenges: ['', Validators.required],
       commonFindings: ['', Validators.required],
+      farmVisitTopic: [''],
+      farmVisitCategory: [null as number | null],
       farmVisits: this.fb.array([]),
       trainingSessions: this.fb.array([]),
       taskRecords: this.fb.array([]),
-      evidenceType: ['GeotaggedPhoto', Validators.required]
+      evidenceType: ['ProofofVisitPhoto', Validators.required]
     });
   }
 
@@ -106,19 +96,21 @@ export class CreateReportComponent implements OnInit, OnDestroy {
         weekEndDate: formValue.weekEndDate,
         challenges: formValue.challenges,
         commonFindings: formValue.commonFindings,
-        evidenceType: formValue.evidenceType
+        farmVisitTopic: formValue.farmVisitTopic ?? formValue.farmVisits?.[0]?.topic ?? '',
+        farmVisitCategory: this.normalizeCategory(
+          formValue.farmVisitCategory ?? formValue.farmVisits?.[0]?.category
+        ),
+        evidenceType: formValue.evidenceType ?? 'ProofofVisitPhoto'
       });
 
       if (formValue.farmVisits && formValue.farmVisits.length > 0) {
+        this.showFarmVisitSetup.set(true);
         formValue.farmVisits.forEach((visit: any) => {
           const visitGroup = this.createFarmVisit();
           visitGroup.patchValue({
-            farmerId: visit.farmerId,
+            tag: visit.tag ?? visit.farmerId ?? '',
             farmerName: visit.farmerName,
             visitDate: visit.visitDate,
-            topic: visit.topic,
-            category: visit.category,
-            location: visit.location,
             notes: visit.notes
           });
           this.farmVisits.push(visitGroup);
@@ -130,11 +122,10 @@ export class CreateReportComponent implements OnInit, OnDestroy {
           const sessionGroup = this.createTrainingSession();
           sessionGroup.patchValue({
             title: session.title,
-            location: session.location,
             sessionDate: session.sessionDate,
             category: session.category
           });
-          
+
           if (session.attendances && session.attendances.length > 0) {
             const attendancesArray = sessionGroup.get('attendances') as FormArray;
             session.attendances.forEach((attendance: any) => {
@@ -143,12 +134,14 @@ export class CreateReportComponent implements OnInit, OnDestroy {
               attendancesArray.push(attendanceGroup);
             });
           }
-          
+
           this.trainingSessions.push(sessionGroup);
         });
       }
 
       this.currentStep.set(draftData.currentStep);
+      this.updateFarmVisitSharedValidators();
+      this.refreshNavigationState();
 
       this.hasDraft.set(false);
       this.toast.show('Draft Loaded', 'Your previous draft has been restored', 'success', 3000);
@@ -172,6 +165,53 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       .subscribe(() => {
         this.saveDraft();
       });
+  }
+
+  setupNavigationRefresh(): void {
+    merge(
+      this.reportForm.valueChanges,
+      this.reportForm.statusChanges
+    ).subscribe(() => this.refreshNavigationState());
+
+    this.refreshNavigationState();
+  }
+
+  refreshNavigationState(): void {
+    this.canProceedToNext.set(this.isStepValid(this.currentStep()));
+  }
+
+  private updateFarmVisitSharedValidators(): void {
+    const topic = this.reportForm.get('farmVisitTopic');
+    const category = this.reportForm.get('farmVisitCategory');
+    const requireSharedFields = this.farmVisits.length > 0;
+
+    if (requireSharedFields) {
+      topic?.setValidators(Validators.required);
+      category?.setValidators(Validators.required);
+    } else {
+      topic?.clearValidators();
+      category?.clearValidators();
+    }
+
+    topic?.updateValueAndValidity({ emitEvent: false });
+    category?.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private normalizeCategory(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    const category = Number(value);
+    return category === 1 || category === 2 || category === 3 ? category : null;
+  }
+
+  private hasFarmVisitCategory(): boolean {
+    return this.normalizeCategory(this.reportForm.get('farmVisitCategory')?.value) !== null;
+  }
+
+  private hasFarmVisitTopic(): boolean {
+    const value = this.reportForm.get('farmVisitTopic')?.value;
+    return typeof value === 'string' && value.trim().length > 0;
   }
 
   saveDraft(): void {
@@ -205,28 +245,51 @@ export class CreateReportComponent implements OnInit, OnDestroy {
 
   createFarmVisit(): FormGroup {
     return this.fb.group({
-      farmerId: ['', Validators.required],
+      tag: ['', Validators.required],
       farmerName: ['', Validators.required],
       visitDate: ['', Validators.required],
-      topic: ['', Validators.required],
-      category: [null, Validators.required],
-      location: ['', Validators.required],
       notes: ['', Validators.required]
     });
   }
 
+  openFarmVisitSetup(): void {
+    this.showFarmVisitSetup.set(true);
+    this.refreshNavigationState();
+  }
+
+  selectFarmVisitCategory(value: number): void {
+    this.reportForm.get('farmVisitCategory')?.setValue(value);
+    this.reportForm.get('farmVisitCategory')?.markAsTouched();
+    this.refreshNavigationState();
+  }
+
   addFarmVisit(): void {
+    const topicCtrl = this.reportForm.get('farmVisitTopic');
+    topicCtrl?.markAsTouched();
+    this.reportForm.get('farmVisitCategory')?.markAsTouched();
+
+    if (!this.hasFarmVisitTopic() || !this.hasFarmVisitCategory()) {
+      this.toast.show('Validation Error', 'Please set Topic and Category before adding a farm visit.', 'error');
+      return;
+    }
+
     this.farmVisits.push(this.createFarmVisit());
+    this.updateFarmVisitSharedValidators();
+    this.refreshNavigationState();
   }
 
   removeFarmVisit(index: number): void {
     this.farmVisits.removeAt(index);
+    if (this.farmVisits.length === 0) {
+      this.showFarmVisitSetup.set(false);
+    }
+    this.updateFarmVisitSharedValidators();
+    this.refreshNavigationState();
   }
 
   createTrainingSession(): FormGroup {
     return this.fb.group({
       title: ['', Validators.required],
-      location: ['', Validators.required],
       sessionDate: ['', Validators.required],
       category: [null, Validators.required],
       attendances: this.fb.array([])
@@ -264,116 +327,17 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       this.selectedFile.set(input.files[0]);
+      this.refreshNavigationState();
     }
-  }
-
-  isLocationLoading(type: 'farm' | 'training', index: number): boolean {
-    const loading = this.locationLoading();
-    return loading?.type === type && loading.index === index;
-  }
-
-  captureLocationName(type: 'farm' | 'training', index: number): void {
-    if (!navigator.onLine) {
-      this.queueLocationCapture(type, index);
-      this.toast.show('Offline', 'Location will be detected when you\'re back online.', 'info', 4000);
-      return;
-    }
-
-    this.locationLoading.set({ type, index });
-
-    this.geoService.getCurrentPosition().subscribe({
-      next: (position) => {
-        this.geoService.reverseGeocode(position.latitude, position.longitude).subscribe({
-          next: (placeName) => {
-            this.setLocationValue(type, index, placeName);
-            this.locationLoading.set(null);
-            this.toast.show('Success', `Location set: ${placeName}`, 'success');
-          },
-          error: () => {
-            this.queueLocationCapture(type, index, position);
-            this.locationLoading.set(null);
-            this.toast.show('Offline', 'Location will sync when network is available.', 'info', 4000);
-          }
-        });
-      },
-      error: (err) => {
-        this.locationLoading.set(null);
-        this.toast.show('Location Error', err.message, 'error');
-      }
-    });
-  }
-
-  private setLocationValue(type: 'farm' | 'training', index: number, placeName: string): void {
-    const group = type === 'farm'
-      ? this.farmVisits.at(index)
-      : this.trainingSessions.at(index);
-    group?.get('location')?.setValue(placeName);
-  }
-
-  private getPendingQueue(): PendingLocationResolve[] {
-    try {
-      const raw = localStorage.getItem(this.PENDING_LOCATIONS_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  private queueLocationCapture(
-    type: 'farm' | 'training',
-    index: number,
-    coords?: { latitude: number; longitude: number }
-  ): void {
-    const queue = this.getPendingQueue().filter(
-      item => !(item.type === type && item.index === index)
-    );
-    queue.push({
-      type,
-      index,
-      latitude: coords?.latitude,
-      longitude: coords?.longitude
-    });
-    localStorage.setItem(this.PENDING_LOCATIONS_KEY, JSON.stringify(queue));
-  }
-
-  private async processPendingLocations(): Promise<void> {
-    if (!navigator.onLine) return;
-
-    const queue = this.getPendingQueue();
-    if (queue.length === 0) return;
-
-    const remaining: PendingLocationResolve[] = [];
-
-    for (const entry of queue) {
-      try {
-        const placeName = entry.latitude != null && entry.longitude != null
-          ? await firstValueFrom(this.geoService.reverseGeocode(entry.latitude, entry.longitude))
-          : await firstValueFrom(this.geoService.resolveLocationName());
-
-        if (this.isEntryValid(entry)) {
-          this.setLocationValue(entry.type, entry.index, placeName);
-        }
-      } catch {
-        if (this.isEntryValid(entry)) {
-          remaining.push(entry);
-        }
-      }
-    }
-
-    localStorage.setItem(this.PENDING_LOCATIONS_KEY, JSON.stringify(remaining));
-
-    if (queue.length > remaining.length) {
-      this.toast.show('Location Synced', 'Pending locations have been updated.', 'success', 3000);
-    }
-  }
-
-  private isEntryValid(entry: PendingLocationResolve): boolean {
-    const array = entry.type === 'farm' ? this.farmVisits : this.trainingSessions;
-    return entry.index >= 0 && entry.index < array.length;
   }
 
   isFieldInvalid(group: AbstractControl, field: string): boolean {
     const control = group.get(field);
+    return !!(control && control.invalid && control.touched);
+  }
+
+  isSharedFarmFieldInvalid(field: string): boolean {
+    const control = this.reportForm.get(field);
     return !!(control && control.invalid && control.touched);
   }
 
@@ -387,6 +351,24 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     return true;
   }
 
+  isFarmVisitLayerValid(): boolean {
+    if (this.farmVisits.length === 0) {
+      return true;
+    }
+
+    if (!this.hasFarmVisitTopic() || !this.hasFarmVisitCategory()) {
+      return false;
+    }
+
+    for (let i = 0; i < this.farmVisits.length; i++) {
+      if (!this.farmVisits.at(i).valid) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   markStepTouched(step: number): void {
     if (step === 1) {
       Object.keys(this.reportForm.controls).forEach(key => {
@@ -395,7 +377,9 @@ export class CreateReportComponent implements OnInit, OnDestroy {
         }
       });
     }
-    if (step === 2 || step === 3) {
+    if (step === 2) {
+      this.reportForm.get('farmVisitTopic')?.markAsTouched();
+      this.reportForm.get('farmVisitCategory')?.markAsTouched();
       this.farmVisits.markAllAsTouched();
     }
     if (step === 3) {
@@ -414,6 +398,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
 
     if (step < 4) {
       this.currentStep.update(s => s + 1);
+      this.refreshNavigationState();
       this.saveDraft();
     }
   }
@@ -421,6 +406,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
   prevStep(): void {
     if (this.currentStep() > 1) {
       this.currentStep.update(s => s - 1);
+      this.refreshNavigationState();
       this.saveDraft();
     }
   }
@@ -439,10 +425,10 @@ export class CreateReportComponent implements OnInit, OnDestroy {
                this.reportForm.get('challenges')?.valid &&
                this.reportForm.get('commonFindings')?.valid);
       case 2:
-        return this.farmVisits.length === 0 || this.farmVisits.valid;
+        return this.isFarmVisitLayerValid();
       case 3:
         return this.hasActivityLayer() &&
-               (this.farmVisits.length === 0 || this.farmVisits.valid) &&
+               this.isFarmVisitLayerValid() &&
                (this.trainingSessions.length === 0 || this.areTrainingSessionsValid());
       case 4:
         return !!this.selectedFile();
@@ -454,7 +440,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
   canSubmit(): boolean {
     return this.isStepValid(1) &&
            this.hasActivityLayer() &&
-           (this.farmVisits.length === 0 || this.farmVisits.valid) &&
+           this.isFarmVisitLayerValid() &&
            (this.trainingSessions.length === 0 || this.areTrainingSessionsValid()) &&
            !!this.selectedFile() &&
            !this.submitting();
@@ -476,8 +462,12 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     const formValue = this.reportForm.value;
 
     const farmVisits = formValue.farmVisits.map((visit: any) => ({
-      ...visit,
-      category: Number(visit.category)
+      tag: visit.tag,
+      farmerName: visit.farmerName,
+      visitDate: visit.visitDate,
+      topic: formValue.farmVisitTopic,
+      category: Number(formValue.farmVisitCategory),
+      notes: visit.notes
     }));
 
     const trainingSessions = formValue.trainingSessions.map((session: any) => ({
@@ -502,7 +492,6 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     void this.offlineSync.submitWeeklyReport(payload).then(result => {
       this.submitting.set(false);
       this.clearDraft();
-      this.clearPendingLocationsForForm();
 
       if (result === 'queued') {
         this.toast.show(
@@ -520,9 +509,5 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       this.submitting.set(false);
       this.toast.show('Submission Error', err.message || 'Failed to submit report', 'error');
     });
-  }
-
-  private clearPendingLocationsForForm(): void {
-    localStorage.removeItem(this.PENDING_LOCATIONS_KEY);
   }
 }

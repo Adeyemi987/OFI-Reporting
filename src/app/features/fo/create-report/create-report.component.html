@@ -119,117 +119,110 @@
         <div class="form-step">
           <div class="step-header">
             <h2>Farm Visits</h2>
-            <button type="button" class="btn-add" (click)="addFarmVisit()">
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
-              </svg>
-              Add Farm Visit
-            </button>
           </div>
 
-          @if (farmVisits.length === 0) {
+          @if (!showFarmVisitSetup() && farmVisits.length === 0) {
             <div class="empty-state">
               <p>No farm visits added yet. Click "Add Farm Visit" to begin, or skip to Training if none this week.</p>
+              <button type="button" class="btn-add" (click)="openFarmVisitSetup()">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                </svg>
+                Add Farm Visit
+              </button>
             </div>
           }
 
-          <div formArrayName="farmVisits" class="nested-array">
-            @for (visit of farmVisits.controls; track $index) {
-              <div [formGroupName]="$index" class="nested-item">
-                <div class="nested-header">
-                  <h3>Farm Visit #{{ $index + 1 }}</h3>
-                  <button type="button" class="btn-remove" (click)="removeFarmVisit($index)">Remove</button>
-                </div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>Farmer ID <span class="required">*</span></label>
-                    <input type="text" formControlName="farmerId" class="form-control">
-                    @if (isFieldInvalid(visit, 'farmerId')) {
-                      <span class="error-text">Farmer ID is required</span>
-                    }
-                  </div>
-                  <div class="form-group">
-                    <label>Farmer Name <span class="required">*</span></label>
-                    <input type="text" formControlName="farmerName" class="form-control">
-                    @if (isFieldInvalid(visit, 'farmerName')) {
-                      <span class="error-text">Farmer name is required</span>
-                    }
-                  </div>
-                  <div class="form-group">
-                    <label>Visit Date <span class="required">*</span></label>
-                    <input type="date" formControlName="visitDate" class="form-control">
-                    @if (isFieldInvalid(visit, 'visitDate')) {
-                      <span class="error-text">Visit date is required</span>
-                    }
-                  </div>
-                  <div class="form-group">
-                    <label>Topic <span class="required">*</span></label>
-                    <input type="text" formControlName="topic" class="form-control" placeholder="Visit topic">
-                    @if (isFieldInvalid(visit, 'topic')) {
-                      <span class="error-text">Topic is required</span>
-                    }
-                  </div>
-                </div>
+          @if (showFarmVisitSetup()) {
+            <div class="setup-card">
+              <h3>Farm Visit Details</h3>
+              <p class="setup-hint">Topic and Category apply to all farm visits added below.</p>
 
-                <div class="form-group">
-                  <label>Category <span class="required">*</span></label>
-                  <div class="radio-group">
-                    @for (cat of categoryOptions; track cat.value) {
-                      <label class="radio-option">
-                        <input type="radio" formControlName="category" [value]="cat.value">
-                        <span>{{ cat.label }}</span>
-                      </label>
-                    }
-                  </div>
-                  @if (isFieldInvalid(visit, 'category')) {
-                    <span class="error-text">Category is required</span>
-                  }
-                </div>
-
-                <div class="form-group">
-                  <label>Location <span class="required">*</span></label>
-                  <p class="location-hint">Use Detect Location — this field cannot be typed manually.</p>
-                  <div class="location-row">
-                    <input
-                      type="text"
-                      formControlName="location"
-                      class="form-control form-control-readonly"
-                      placeholder="Click Detect Location"
-                      readonly
-                      tabindex="-1"
-                    >
-                    <button
-                      type="button"
-                      class="btn-geo-small"
-                      (click)="captureLocationName('farm', $index)"
-                      [disabled]="isLocationLoading('farm', $index)"
-                    >
-                      @if (isLocationLoading('farm', $index)) {
-                        <span class="spinner-small"></span>
-                        Detecting...
-                      } @else {
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                          <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                        </svg>
-                        Detect Location
-                      }
-                    </button>
-                  </div>
-                  @if (isFieldInvalid(visit, 'location')) {
-                    <span class="error-text">Location is required</span>
-                  }
-                </div>
-
-                <div class="form-group">
-                  <label>Notes <span class="required">*</span></label>
-                  <textarea formControlName="notes" rows="3" class="form-control"></textarea>
-                  @if (isFieldInvalid(visit, 'notes')) {
-                    <span class="error-text">Notes are required</span>
-                  }
-                </div>
+              <div class="form-group">
+                <label>Topic <span class="required">*</span></label>
+                <input type="text" formControlName="farmVisitTopic" class="form-control" placeholder="Visit topic">
+                @if (isSharedFarmFieldInvalid('farmVisitTopic')) {
+                  <span class="error-text">Topic is required</span>
+                }
               </div>
-            }
-          </div>
+
+              <div class="form-group">
+                <label>Category <span class="required">*</span></label>
+                <div class="radio-group">
+                  @for (cat of categoryOptions; track cat.value) {
+                    <label class="radio-option">
+                      <input
+                        type="radio"
+                        name="farmVisitCategory"
+                        [checked]="reportForm.get('farmVisitCategory')?.value === cat.value"
+                        (change)="selectFarmVisitCategory(cat.value)"
+                      >
+                      <span>{{ cat.label }}</span>
+                    </label>
+                  }
+                </div>
+                @if (isSharedFarmFieldInvalid('farmVisitCategory')) {
+                  <span class="error-text">Category is required</span>
+                }
+              </div>
+            </div>
+
+            <div class="farm-visits-list-panel" formArrayName="farmVisits">
+              <div class="farm-visits-list-scroll">
+                @if (farmVisits.length === 0) {
+                  <p class="farm-visits-list-empty">No visits added yet. Fill in Topic and Category above, then click Add Farm Visit below.</p>
+                }
+                @for (visit of farmVisits.controls; track $index) {
+                  <div [formGroupName]="$index" class="nested-item">
+                    <div class="nested-header">
+                      <h3>Farm Visit #{{ $index + 1 }}</h3>
+                      <button type="button" class="btn-remove" (click)="removeFarmVisit($index)">Remove</button>
+                    </div>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label>Tag <span class="required">*</span></label>
+                        <input type="text" formControlName="tag" class="form-control">
+                        @if (isFieldInvalid(visit, 'tag')) {
+                          <span class="error-text">Tag is required</span>
+                        }
+                      </div>
+                      <div class="form-group">
+                        <label>Farmer Name <span class="required">*</span></label>
+                        <input type="text" formControlName="farmerName" class="form-control">
+                        @if (isFieldInvalid(visit, 'farmerName')) {
+                          <span class="error-text">Farmer name is required</span>
+                        }
+                      </div>
+                      <div class="form-group">
+                        <label>Visit Date <span class="required">*</span></label>
+                        <input type="date" formControlName="visitDate" class="form-control">
+                        @if (isFieldInvalid(visit, 'visitDate')) {
+                          <span class="error-text">Visit date is required</span>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label>Notes <span class="required">*</span></label>
+                      <textarea formControlName="notes" rows="3" class="form-control"></textarea>
+                      @if (isFieldInvalid(visit, 'notes')) {
+                        <span class="error-text">Notes are required</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="farm-visits-add-row">
+                <button type="button" class="btn-add" (click)="addFarmVisit()">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                  </svg>
+                  Add Farm Visit
+                </button>
+              </div>
+            </div>
+          }
         </div>
       }
 
@@ -291,40 +284,6 @@
                   }
                 </div>
 
-                <div class="form-group">
-                  <label>Location <span class="required">*</span></label>
-                  <p class="location-hint">Use Detect Location — this field cannot be typed manually.</p>
-                  <div class="location-row">
-                    <input
-                      type="text"
-                      formControlName="location"
-                      class="form-control form-control-readonly"
-                      placeholder="Click Detect Location"
-                      readonly
-                      tabindex="-1"
-                    >
-                    <button
-                      type="button"
-                      class="btn-geo-small"
-                      (click)="captureLocationName('training', $index)"
-                      [disabled]="isLocationLoading('training', $index)"
-                    >
-                      @if (isLocationLoading('training', $index)) {
-                        <span class="spinner-small"></span>
-                        Detecting...
-                      } @else {
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                          <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                        </svg>
-                        Detect Location
-                      }
-                    </button>
-                  </div>
-                  @if (isFieldInvalid(session, 'location')) {
-                    <span class="error-text">Location is required</span>
-                  }
-                </div>
-
                 <div class="attendances-section">
                   <div class="subsection-header">
                     <h4>Attendances</h4>
@@ -381,7 +340,7 @@
           <button type="button" class="btn-secondary" (click)="prevStep()">Previous</button>
         }
         @if (currentStep() < 4) {
-          <button type="button" class="btn-primary" (click)="nextStep()">Next</button>
+          <button type="button" class="btn-primary" (click)="nextStep()" [disabled]="!canProceedToNext()">Next</button>
         }
         @if (currentStep() === 4) {
           <button type="submit" class="btn-submit" [disabled]="!canSubmit()">

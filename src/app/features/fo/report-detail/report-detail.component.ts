@@ -22,10 +22,11 @@ interface TrainingSession {
 
 interface FarmerVisit {
   id?: string;
-  farmerId: string;
+  tag?: string;
+  farmerId?: string;
   farmerName: string;
   visitDate: string;
-  location: string;
+  location?: string;
   topic?: string;
   category?: number;
   notes: string;

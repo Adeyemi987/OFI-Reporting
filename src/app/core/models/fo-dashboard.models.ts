@@ -33,12 +33,11 @@ export type FOReportStatus = 'Submitted' | 'UnderReview' | 'Approved' | 'Rejecte
 
 // Weekly Report Models
 export interface FarmVisit {
-  farmerId: string;
+  tag: string;
   farmerName: string;
   visitDate: string;
   topic: string;
   category: number;
-  location: string;
   notes: string;
 }
 
@@ -49,7 +48,6 @@ export interface TrainingAttendance {
 
 export interface TrainingSession {
   title: string;
-  location: string;
   sessionDate: string;
   category: number;
   attendances: TrainingAttendance[];
