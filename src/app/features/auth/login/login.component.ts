@@ -91,7 +91,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 type="email"
                 [(ngModel)]="email"
                 name="email"
-                placeholder="your@ofi.com"
+                placeholder="your@corvaytechnologies.com"
                 required
                 style="
                   width: 100%; padding: 12px 16px 12px 44px;
