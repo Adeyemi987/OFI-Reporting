@@ -1,12 +1,15 @@
 services:
   - type: web
     name: ofi-reporting
-    env: static
-    buildCommand: npm ci && npm run build
+    runtime: static
+    buildCommand: npm ci && npm run build:render
     staticPublishPath: dist/ofi-reporting/browser
     envVars:
       - key: NODE_VERSION
         value: 22.11.0
+      # Optional override; defaults to value in src/environments/environment.prod.ts
+      - key: API_URL
+        value: https://ofi-reporting-machine-api.onrender.com
     routes:
       - type: rewrite
         source: /*
