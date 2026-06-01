@@ -128,7 +128,13 @@ export interface SubordinateReport {
   userId: string;
   fullName: string;
   role: UserRole;
+  weekNumber: number;
+  year: number;
+  weekStartDate: string;
+  weekEndDate: string;
   farmersVisited: number;
+  trainingSessionsCount: number;
+  evidenceCount: number;
   gapCount: number;
   gepCount: number;
   gspCount: number;
@@ -210,6 +216,7 @@ export interface DashboardApiReport {
   userName: string;
   status: number | string;  // API may return numeric (0–7) or string enum name
   farmersVisited: number;
+  evidenceCount?: number;
   gapCount: number;
   gepCount: number;
   gspCount: number;
@@ -217,6 +224,9 @@ export interface DashboardApiReport {
   trainingAttendees: number;
   weekNumber: number;
   year: number;
+  weekStartDate?: string;
+  weekEndDate?: string;
+  evidences?: unknown[];
 }
 
 export interface DashboardApiData {

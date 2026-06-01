@@ -57,12 +57,28 @@ export class DashboardService {
     return STATUS_MAP_NUMERIC[status] ?? 'pending_fc';
   }
 
+  private resolveEvidenceCount(r: DashboardApiReport & Record<string, unknown>): number {
+    if (typeof r.evidenceCount === 'number') return r.evidenceCount;
+    if (typeof r['EvidenceCount'] === 'number') return r['EvidenceCount'] as number;
+    const evidences = r.evidences ?? r['Evidences'];
+    if (Array.isArray(evidences)) return evidences.length;
+    if (r['hasEvidence'] === true || r['HasEvidence'] === true) return 1;
+    return 0;
+  }
+
   private mapReport(r: DashboardApiReport, subordinateRole: UserRole): SubordinateReport {
+    const raw = r as DashboardApiReport & Record<string, unknown>;
     return {
       userId: r.reportId,
       fullName: r.userName,
       role: subordinateRole,
-      farmersVisited: r.farmersVisited,
+      weekNumber: r.weekNumber ?? 0,
+      year: r.year ?? new Date().getFullYear(),
+      weekStartDate: (raw.weekStartDate ?? raw['WeekStartDate'] ?? '') as string,
+      weekEndDate: (raw.weekEndDate ?? raw['WeekEndDate'] ?? '') as string,
+      farmersVisited: r.farmersVisited ?? (raw['totalFarmersVisited'] as number) ?? 0,
+      trainingSessionsCount: r.trainingSessions ?? (raw['totalTrainingSessions'] as number) ?? 0,
+      evidenceCount: this.resolveEvidenceCount(raw),
       gapCount: r.gapCount,
       gepCount: r.gepCount,
       gspCount: r.gspCount,
@@ -300,10 +316,14 @@ export class DashboardService {
   }
 
   private buildSummaryRows(data: SubordinateReport[]): unknown[][] {
-    const header = ['Full Name', 'Role', 'Farmers Visited', 'GAP Tasks', 'GEP Tasks', 'GSP Tasks', 'Status', 'Approval Date', 'Approved By'];
+    const header = ['Full Name', 'Role', 'Week', 'Period Start', 'Period End', 'Farmers Visited', 'Training Sessions', 'Evidence', 'Status', 'Approval Date', 'Approved By'];
     const rows = data.map(s => [
-      s.fullName, s.role, s.farmersVisited,
-      s.gapCount, s.gepCount, s.gspCount,
+      s.fullName, s.role,
+      s.weekNumber ? `Week ${s.weekNumber}, ${s.year}` : '',
+      s.weekStartDate, s.weekEndDate,
+      s.farmersVisited,
+      s.trainingSessionsCount,
+      s.evidenceCount,
       s.status, s.approvalDate ?? '', s.approvedBy ?? '',
     ]);
     return [header, ...rows];

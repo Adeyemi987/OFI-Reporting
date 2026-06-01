@@ -65,7 +65,7 @@ import { ReportUiStatusFilter } from '../../core/utils/fo-report-status.util';
           </div>
           <div>
             <div style="font-size:13px;font-weight:700;color:#8B2D73;">How to view details</div>
-            <div style="font-size:12px;color:#C2389A;margin-top:2px;">Click on any record below to navigate to the details page and view their full <strong>Tasks</strong> and <strong>Training</strong> information.</div>
+            <div style="font-size:12px;color:#C2389A;margin-top:2px;">Click on any record below to navigate to the details page and view their full report information.</div>
           </div>
         </div>
         }
@@ -204,10 +204,10 @@ import { ReportUiStatusFilter } from '../../core/utils/fo-report-status.util';
               <thead>
                 <tr style="background:#F8FAFC;">
                   <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Full Name</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Week</th>
+                  <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;min-width:160px;">Period</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Farmers</th>
-                  <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#228A22;text-transform:uppercase;letter-spacing:0.5px;">GAP</th>
-                  <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#0EA5E9;text-transform:uppercase;letter-spacing:0.5px;">GEP</th>
-                  <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#8B5CF6;text-transform:uppercase;letter-spacing:0.5px;">GSP</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#0EA5E9;text-transform:uppercase;letter-spacing:0.5px;">Training Sessions</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;min-width:120px;">Action</th>
                   <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;min-width:200px;">Status / Action</th>
                 </tr>
@@ -233,6 +233,19 @@ import { ReportUiStatusFilter } from '../../core/utils/fo-report-status.util';
                       </div>
                     </td>
                     <td style="padding:14px 16px;text-align:center;">
+                      @if (sub.weekNumber) {
+                        <span style="
+                          font-size:12px;font-weight:700;color:#374151;
+                          background:#F3F4F6;padding:3px 10px;border-radius:8px;white-space:nowrap;
+                        ">W{{ sub.weekNumber }}, {{ sub.year }}</span>
+                      } @else {
+                        <span style="font-size:12px;color:#9CA3AF;">—</span>
+                      }
+                    </td>
+                    <td style="padding:14px 16px;">
+                      <span style="font-size:12px;color:#6B7280;white-space:nowrap;">{{ formatReportPeriod(sub) }}</span>
+                    </td>
+                    <td style="padding:14px 16px;text-align:center;">
                       <span style="
                         font-size:15px;font-weight:800;color:#D047AE;
                         background:#FDF2FB;padding:3px 10px;border-radius:8px;
@@ -240,21 +253,9 @@ import { ReportUiStatusFilter } from '../../core/utils/fo-report-status.util';
                     </td>
                     <td style="padding:14px 16px;text-align:center;">
                       <span style="
-                        font-size:14px;font-weight:700;color:#C2389A;
-                        background:#FADDF2;padding:3px 10px;border-radius:8px;
-                      ">{{ sub.gapCount }}</span>
-                    </td>
-                    <td style="padding:14px 16px;text-align:center;">
-                      <span style="
                         font-size:14px;font-weight:700;color:#0284C7;
                         background:#E0F2FE;padding:3px 10px;border-radius:8px;
-                      ">{{ sub.gepCount }}</span>
-                    </td>
-                    <td style="padding:14px 16px;text-align:center;">
-                      <span style="
-                        font-size:14px;font-weight:700;color:#7C3AED;
-                        background:#EDE9FE;padding:3px 10px;border-radius:8px;
-                      ">{{ sub.gspCount }}</span>
+                      ">{{ sub.trainingSessionsCount }}</span>
                     </td>
                     <td style="padding:10px 16px;text-align:center;">
                       @if (canViewDetails()) {
@@ -715,6 +716,20 @@ export class ReportsComponent implements OnInit {
 
   getInitials(name: string): string {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  }
+
+  formatReportPeriod(sub: SubordinateReport): string {
+    if (!sub.weekStartDate && !sub.weekEndDate) return '—';
+    return `${this.formatDate(sub.weekStartDate)} – ${this.formatDate(sub.weekEndDate)}`;
+  }
+
+  private formatDate(dateStr: string): string {
+    if (!dateStr) return 'N/A';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return 'N/A';
+    }
   }
 
   toggleDownloadMenu(): void {

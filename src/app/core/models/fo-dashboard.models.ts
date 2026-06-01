@@ -45,6 +45,7 @@ export interface FarmVisit {
   farmerName: string;
   title: string;
   visitDate: string;
+  location?: string;
   category: number;
   notes: string;
 }
@@ -57,6 +58,7 @@ export interface TrainingAttendance {
 export interface TrainingSession {
   title: string;
   sessionDate: string;
+  location?: string;
   category: number;
   attendances: TrainingAttendance[];
 }

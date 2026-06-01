@@ -30,9 +30,8 @@ export function extractErrorMessage(err: unknown): string {
   }
   if (shaped?.error && typeof shaped.error === 'object') {
     const record = shaped.error as Record<string, unknown>;
-    if (typeof record['message'] === 'string' && record['message'].trim()) {
-      return record['message'].trim();
-    }
+    const nestedMessage = pickMessageFromRecord(record);
+    if (nestedMessage) return nestedMessage;
   }
   if (typeof shaped?.error === 'string' && shaped.error.trim()) {
     const parsed = parseErrorBodyString(shaped.error);
@@ -63,9 +62,8 @@ function parseErrorBody(body: unknown): string | null {
 
   if (body && typeof body === 'object') {
     const record = body as Record<string, unknown>;
-    if (typeof record['message'] === 'string' && record['message'].trim()) {
-      return record['message'].trim();
-    }
+    const message = pickMessageFromRecord(record);
+    if (message) return message;
     if (typeof record['title'] === 'string' && record['title'].trim()) {
       return record['title'].trim();
     }
@@ -101,6 +99,15 @@ function parseErrorBodyString(raw: string): string | null {
   }
 
   return trimmed;
+}
+
+function pickMessageFromRecord(record: Record<string, unknown>): string | null {
+  if (typeof record['message'] === 'string' && record['message'].trim()) {
+    const raw = record['message'].trim();
+    const parsed = parseErrorBodyString(raw);
+    return parsed ?? raw;
+  }
+  return null;
 }
 
 export function getHttpErrorTitle(status: number): string {

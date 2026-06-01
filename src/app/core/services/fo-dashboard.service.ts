@@ -18,6 +18,7 @@ import {
   reportUiFilterToApiStatus,
   ReportUiStatusFilter
 } from '../utils/fo-report-status.util';
+import { extractErrorMessage } from '../utils/http-error.util';
 
 @Injectable({ providedIn: 'root' })
 export class FODashboardService {
@@ -155,6 +156,9 @@ export class FODashboardService {
     if (trimmed.startsWith('{')) {
       try {
         const parsed = JSON.parse(trimmed) as ApiResult<unknown>;
+        if (parsed.success === false) {
+          throw { error: { message: parsed.message ?? fallbackMessage } };
+        }
         return {
           success: parsed.success ?? true,
           message: parsed.message ?? fallbackMessage
@@ -168,11 +172,7 @@ export class FODashboardService {
   }
 
   private normalizeActionError(err: unknown, fallbackMessage: string): { error: { message: string } } {
-    const e = err as { error?: unknown; message?: string };
-    const message = typeof e?.error === 'string' && e.error.trim()
-      ? e.error.trim()
-      : (e?.error as { message?: string })?.message ?? fallbackMessage;
-    return { error: { message } };
+    return { error: { message: extractErrorMessage(err) || fallbackMessage } };
   }
 
   private mapReportsPage(

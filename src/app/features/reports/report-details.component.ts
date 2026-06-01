@@ -1,9 +1,28 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal, HostListener } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
-import { SubordinateReport } from '../../core/models';
+import { API_BASE_URL } from '../../core/tokens';
+
+interface ReportEvidence {
+  id: string;
+  originalFileName: string;
+  evidenceType?: string;
+  uploadedAt?: string;
+  downloadUrl?: string;
+  contentType?: string;
+}
+
+interface ReportFarmerVisit {
+  id: string;
+  title: string;
+  farmerName: string;
+  tag: string;
+  visitDate: string;
+  notes: string;
+}
 
 @Component({
   selector: 'app-report-details',
@@ -86,16 +105,8 @@ import { SubordinateReport } from '../../core/models';
             <div style="font-size: 28px; font-weight: 800; color: #D047AE;">{{ record.farmersVisited }}</div>
           </div>
           <div style="background: white; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #F3F4F6;">
-            <div style="font-size: 12px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin-bottom: 8px;">GAP Tasks</div>
-            <div style="font-size: 28px; font-weight: 800; color: #228A22;">{{ record.gapCount }}</div>
-          </div>
-          <div style="background: white; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #F3F4F6;">
-            <div style="font-size: 12px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin-bottom: 8px;">GEP Tasks</div>
-            <div style="font-size: 28px; font-weight: 800; color: #0EA5E9;">{{ record.gepCount }}</div>
-          </div>
-          <div style="background: white; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #F3F4F6;">
-            <div style="font-size: 12px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin-bottom: 8px;">GSP Tasks</div>
-            <div style="font-size: 28px; font-weight: 800; color: #8B5CF6;">{{ record.gspCount }}</div>
+            <div style="font-size: 12px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin-bottom: 8px;">Evidence</div>
+            <div style="font-size: 28px; font-weight: 800; color: #D97706;">{{ record.evidences?.length ?? 0 }}</div>
           </div>
         </div>
 
@@ -107,20 +118,20 @@ import { SubordinateReport } from '../../core/models';
             background: #F8FAFC; padding: 0;
           ">
             <button
-              (click)="activeTab.set('tasks')"
-              [style.background]="activeTab() === 'tasks' ? 'white' : 'transparent'"
-              [style.border-bottom]="activeTab() === 'tasks' ? '3px solid #D047AE' : 'none'"
-              [style.color]="activeTab() === 'tasks' ? '#8B2D73' : '#9CA3AF'"
-              [style.font-weight]="activeTab() === 'tasks' ? '700' : '500'"
+              (click)="activeTab.set('evidence')"
+              [style.background]="activeTab() === 'evidence' ? 'white' : 'transparent'"
+              [style.border-bottom]="activeTab() === 'evidence' ? '3px solid #D047AE' : 'none'"
+              [style.color]="activeTab() === 'evidence' ? '#8B2D73' : '#9CA3AF'"
+              [style.font-weight]="activeTab() === 'evidence' ? '700' : '500'"
               style="
                 padding: 16px 24px; cursor: pointer; border: none;
                 transition: all 0.2s; font-size: 14px; white-space: nowrap;
               "
             >
               <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="display: inline; margin-right: 8px; vertical-align: middle;">
-                <path d="M5.5 13a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.3A4.5 4.5 0 1113.5 13H11V9.413l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13H5.5z"/>
+                <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
               </svg>
-              Tasks
+              Evidence
             </button>
             <button
               (click)="activeTab.set('training')"
@@ -156,44 +167,63 @@ import { SubordinateReport } from '../../core/models';
             </button>
           </div>
 
-          <!-- Tab Content: Tasks -->
-          @if (activeTab() === 'tasks') {
+          <!-- Tab Content: Evidence -->
+          @if (activeTab() === 'evidence') {
             <div style="padding: 24px;">
-              @if (record.taskRecords && record.taskRecords.length > 0) {
+              @if (record.evidences && record.evidences.length > 0) {
+                <p style="margin: 0 0 14px; font-size: 12px; color: #9CA3AF; display: flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                  </svg>
+                  Click a preview thumbnail to view the full image
+                </p>
                 <div style="overflow-x: auto;">
                   <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                     <thead>
                       <tr style="background: #F8FAFC;">
-                        <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Title</th>
-                        <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Description</th>
-                        <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Category</th>
-                        <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Status</th>
-                        <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Completed Date</th>
+                        <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Preview</th>
+                        <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">File Name</th>
+                        <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Type</th>
+                        <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Uploaded</th>
                       </tr>
                     </thead>
                     <tbody>
-                      @for (task of record.taskRecords; track task.id) {
+                      @for (evidence of record.evidences; track evidence.id) {
                         <tr style="border-bottom: 1px solid #F3F4F6;">
-                          <td style="padding: 12px 16px; font-weight: 600;">{{ task.title }}</td>
-                          <td style="padding: 12px 16px; color: #6B7280; font-size: 12px;">{{ task.description ?? '—' }}</td>
-                          <td style="padding: 12px 16px; text-align: center;">
-                            <span [style]="getCategoryStyle(task.category)">{{ mapCategory(task.category) }}</span>
-                          </td>
-                          <td style="padding: 12px 16px; text-align: center;">
-                            @if (task.isCompleted) {
-                              <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #DCFCE7; color: #16A34A; border-radius: 6px; font-weight: 600; font-size: 11px;">
-                                <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                                Completed
-                              </span>
+                          <td style="padding: 12px 16px;">
+                            @if (getEvidencePreviewUrl(evidence.id)) {
+                              <button
+                                type="button"
+                                class="evidence-thumb-btn"
+                                (click)="openEnlargedEvidence(evidence)"
+                                [attr.aria-label]="'View full image: ' + evidence.originalFileName"
+                                title="Click to enlarge"
+                              >
+                                <img
+                                  [src]="getEvidencePreviewUrl(evidence.id)!"
+                                  [alt]="evidence.originalFileName"
+                                />
+                                <span class="evidence-thumb-overlay" aria-hidden="true">
+                                  <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l4.293 4.293a1 1 0 01-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm13 12a1 1 0 01-1 1h-4a1 1 0 110-2h1.586l-4.293-4.293a1 1 0 111.414-1.414L15 13.586V12a1 1 0 112 0v4z" clip-rule="evenodd"/>
+                                  </svg>
+                                </span>
+                              </button>
                             } @else {
-                              <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #FEF9C3; color: #B45309; border-radius: 6px; font-weight: 600; font-size: 11px;">
-                                <span style="width: 4px; height: 4px; border-radius: 50%; background: currentColor; display: inline-block;"></span>
-                                Pending
-                              </span>
+                              <div style="
+                                width: 56px; height: 56px; border-radius: 8px;
+                                background: #F3F4F6; display: flex; align-items: center; justify-content: center; color: #9CA3AF;
+                              ">
+                                <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
+                                </svg>
+                              </div>
                             }
                           </td>
+                          <td style="padding: 12px 16px; font-weight: 600;">{{ evidence.originalFileName }}</td>
+                          <td style="padding: 12px 16px; text-align: center; color: #6B7280; font-size: 12px;">{{ evidence.evidenceType ?? '—' }}</td>
                           <td style="padding: 12px 16px; text-align: center; color: #6B7280; font-size: 12px;">
-                            {{ task.completedDate ? (task.completedDate | date:'MMM d, y') : '—' }}
+                            {{ evidence.uploadedAt ? (evidence.uploadedAt | date:'MMM d, y') : '—' }}
                           </td>
                         </tr>
                       }
@@ -202,7 +232,7 @@ import { SubordinateReport } from '../../core/models';
                 </div>
               } @else {
                 <div style="padding: 32px; text-align: center; color: #9CA3AF;">
-                  <p style="margin: 0; font-size: 14px;">No tasks recorded for this period.</p>
+                  <p style="margin: 0; font-size: 14px;">No evidence uploaded for this report.</p>
                 </div>
               }
             </div>
@@ -258,21 +288,32 @@ import { SubordinateReport } from '../../core/models';
                   <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                     <thead>
                       <tr style="background: #F8FAFC;">
+                        <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Title</th>
                         <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Farmer Name</th>
+                        <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Tag</th>
                         <th style="padding: 12px 16px; text-align: center; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Visit Date</th>
-                        <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Location</th>
                         <th style="padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">Notes</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (visit of record.farmerVisits; track visit.id) {
                         <tr style="border-bottom: 1px solid #F3F4F6;">
-                          <td style="padding: 12px 16px; font-weight: 600;">{{ visit.farmerName }}</td>
+                          <td style="padding: 12px 16px; font-weight: 600;">{{ visit.title || '—' }}</td>
+                          <td style="padding: 12px 16px; font-weight: 600;">{{ visit.farmerName || '—' }}</td>
+                          <td style="padding: 12px 16px; text-align: center;">
+                            @if (visit.tag) {
+                              <span style="
+                                display: inline-block; padding: 3px 10px; border-radius: 999px;
+                                background: #FDF2FB; color: #8B2D73; font-size: 11px; font-weight: 700;
+                              ">{{ visit.tag }}</span>
+                            } @else {
+                              <span style="color: #9CA3AF;">—</span>
+                            }
+                          </td>
                           <td style="padding: 12px 16px; text-align: center; color: #6B7280; font-size: 12px;">
                             {{ visit.visitDate ? (visit.visitDate | date:'MMM d, y') : '—' }}
                           </td>
-                          <td style="padding: 12px 16px; color: #6B7280;">{{ visit.location }}</td>
-                          <td style="padding: 12px 16px; color: #9CA3AF; font-size: 12px;">{{ visit.notes ?? '—' }}</td>
+                          <td style="padding: 12px 16px; color: #9CA3AF; font-size: 12px;">{{ visit.notes || '—' }}</td>
                         </tr>
                       }
                     </tbody>
@@ -297,26 +338,131 @@ import { SubordinateReport } from '../../core/models';
         </div>
       }
 
+      @if (enlargedEvidence()) {
+        <div
+          class="evidence-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Enlarged evidence image"
+          (click)="closeEnlargedEvidence()"
+          style="
+            position: fixed; inset: 0; z-index: 1200;
+            background: rgba(17, 24, 39, 0.82);
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px;
+          "
+        >
+          <div
+            (click)="$event.stopPropagation()"
+            style="
+              position: relative; max-width: min(920px, 96vw); max-height: 92vh;
+              background: white; border-radius: 16px; overflow: hidden;
+              box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+              display: flex; flex-direction: column;
+            "
+          >
+            <div style="
+              display: flex; align-items: center; justify-content: space-between; gap: 12px;
+              padding: 14px 16px; border-bottom: 1px solid #F3F4F6; background: #FAFAFA;
+            ">
+              <span style="font-size: 13px; font-weight: 700; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ enlargedEvidence()!.fileName }}
+              </span>
+              <button
+                type="button"
+                (click)="closeEnlargedEvidence()"
+                aria-label="Close enlarged image"
+                style="
+                  width: 32px; height: 32px; border: none; border-radius: 8px;
+                  background: #FEE2E2; color: #DC2626; cursor: pointer;
+                  display: inline-flex; align-items: center; justify-content: center;
+                "
+              >
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+            <div style="padding: 16px; background: #111827; display: flex; align-items: center; justify-content: center;">
+              <img
+                [src]="enlargedEvidence()!.url"
+                [alt]="enlargedEvidence()!.fileName"
+                style="max-width: 100%; max-height: calc(92vh - 120px); object-fit: contain; border-radius: 8px;"
+              />
+            </div>
+          </div>
+        </div>
+      }
+
       <style>
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        .evidence-thumb-btn {
+          position: relative;
+          display: inline-block;
+          padding: 0;
+          border: 2px solid #E5E7EB;
+          border-radius: 10px;
+          background: none;
+          cursor: zoom-in;
+          overflow: hidden;
+          transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+        }
+        .evidence-thumb-btn:hover,
+        .evidence-thumb-btn:focus-visible {
+          border-color: #D047AE;
+          box-shadow: 0 4px 14px rgba(208, 71, 174, 0.28);
+          transform: scale(1.04);
+          outline: none;
+        }
+        .evidence-thumb-btn img {
+          display: block;
+          width: 64px;
+          height: 64px;
+          object-fit: cover;
+        }
+        .evidence-thumb-overlay {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(17, 24, 39, 0.5);
+          color: white;
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+        .evidence-thumb-btn:hover .evidence-thumb-overlay,
+        .evidence-thumb-btn:focus-visible .evidence-thumb-overlay {
+          opacity: 1;
         }
       </style>
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ReportDetailsComponent implements OnInit {
+export class ReportDetailsComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private dashboardService = inject(DashboardService);
   private authService = inject(AuthService);
+  private http = inject(HttpClient);
+  private readonly baseUrl = inject(API_BASE_URL);
 
   details = signal<any>(null);
-  activeTab = signal<'tasks' | 'training' | 'farm-visits'>('tasks');
+  activeTab = signal<'evidence' | 'training' | 'farm-visits'>('evidence');
   loading = signal(true);
   error = signal<string | null>(null);
+  evidencePreviewUrls = signal<Record<string, string>>({});
+  enlargedEvidence = signal<{ url: string; fileName: string } | null>(null);
+  private previewObjectUrls: string[] = [];
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.closeEnlargedEvidence();
+  }
 
   ngOnInit(): void {
     const userId = this.route.snapshot.paramMap.get('userId');
@@ -339,15 +485,15 @@ export class ReportDetailsComponent implements OnInit {
             fullName: payload.fullName ?? payload.FullName ?? payload.userName ?? payload.UserName,
             role: payload.role ?? payload.Role,
             farmersVisited: payload.totalFarmersVisited ?? payload.farmersVisited ?? payload.FarmersVisited ?? 0,
-            gapCount: payload.gapTaskCount ?? payload.gapCount ?? payload.GapCount ?? 0,
-            gepCount: payload.gepTaskCount ?? payload.gepCount ?? payload.GepCount ?? 0,
-            gspCount: payload.gspTaskCount ?? payload.gspCount ?? payload.GspCount ?? 0,
-            taskRecords: payload.taskRecords ?? payload.TaskRecords ?? payload.tasks ?? payload.Tasks ?? [],
+            evidences: this.normalizeEvidences(payload.evidences ?? payload.Evidences ?? []),
             trainingSessions: payload.trainingSessions ?? payload.TrainingSessions ?? [],
-            farmerVisits: payload.farmerVisits ?? payload.FarmerVisits ?? payload.farmVisits ?? payload.FarmVisits ?? [],
+            farmerVisits: this.normalizeFarmerVisits(
+              payload.farmerVisits ?? payload.FarmerVisits ?? payload.farmVisits ?? payload.FarmVisits ?? []
+            ),
           };
           console.log('[ReportDetails] Normalized payload:', normalized);
           this.details.set(normalized);
+          this.loadEvidencePreviews(normalized.evidences);
           this.error.set(null);
         } else {
           this.error.set('Failed to load report details');
@@ -390,6 +536,71 @@ export class ReportDetailsComponent implements OnInit {
       Unknown: { 'background': '#F3F4F6', 'color': '#6B7280', 'padding': '4px 10px', 'border-radius': '6px', 'font-weight': '600', 'font-size': '11px', 'display': 'inline-block' }
     };
     return styles[label] ?? styles['Unknown'];
+  }
+
+  ngOnDestroy(): void {
+    this.enlargedEvidence.set(null);
+    this.previewObjectUrls.forEach(url => URL.revokeObjectURL(url));
+    this.previewObjectUrls = [];
+  }
+
+  getEvidencePreviewUrl(evidenceId: string): string | null {
+    return this.evidencePreviewUrls()[evidenceId] ?? null;
+  }
+
+  openEnlargedEvidence(evidence: ReportEvidence): void {
+    const url = this.getEvidencePreviewUrl(evidence.id);
+    if (!url) return;
+    this.enlargedEvidence.set({
+      url,
+      fileName: evidence.originalFileName
+    });
+  }
+
+  closeEnlargedEvidence(): void {
+    this.enlargedEvidence.set(null);
+  }
+
+  private normalizeFarmerVisits(raw: unknown[]): ReportFarmerVisit[] {
+    return raw.map((item: any, index: number) => ({
+      id: item.id ?? item.Id ?? `visit-${index}`,
+      title: item.title ?? item.Title ?? item.topic ?? item.Topic ?? '',
+      farmerName: item.farmerName ?? item.FarmerName ?? '',
+      tag: item.farmerId ?? item.FarmerId ?? item.tag ?? item.Tag ?? '',
+      visitDate: item.visitDate ?? item.VisitDate ?? '',
+      notes: item.notes ?? item.Notes ?? ''
+    }));
+  }
+
+  private normalizeEvidences(raw: unknown[]): ReportEvidence[] {
+    return raw.map((item: any) => ({
+      id: item.id ?? item.Id ?? '',
+      originalFileName: item.originalFileName ?? item.OriginalFileName ?? 'Evidence file',
+      evidenceType: item.evidenceType ?? item.EvidenceType,
+      uploadedAt: item.uploadedAt ?? item.UploadedAt,
+      downloadUrl: item.downloadUrl ?? item.DownloadUrl,
+      contentType: item.contentType ?? item.ContentType
+    }));
+  }
+
+  private loadEvidencePreviews(evidences: ReportEvidence[]): void {
+    evidences.forEach(evidence => {
+      if (!evidence.downloadUrl || !evidence.id) return;
+      const url = evidence.downloadUrl.startsWith('http')
+        ? evidence.downloadUrl
+        : `${this.baseUrl}${evidence.downloadUrl}`;
+
+      this.http.get(url, { responseType: 'blob' }).subscribe({
+        next: (blob) => {
+          const objectUrl = URL.createObjectURL(blob);
+          this.previewObjectUrls.push(objectUrl);
+          this.evidencePreviewUrls.update(current => ({
+            ...current,
+            [evidence.id]: objectUrl
+          }));
+        }
+      });
+    });
   }
 
   goBack(): void {

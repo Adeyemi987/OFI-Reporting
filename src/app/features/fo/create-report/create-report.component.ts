@@ -144,6 +144,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
             tag: visit.tag ?? visit.farmerId ?? '',
             farmerName: visit.farmerName,
             visitDate: visit.visitDate,
+            location: visit.location ?? '',
             notes: visit.notes
           });
           this.farmVisits.push(visitGroup);
@@ -156,6 +157,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
           sessionGroup.patchValue({
             title: session.title,
             sessionDate: session.sessionDate,
+            location: session.location ?? '',
             category: session.category
           });
 
@@ -255,6 +257,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       tag: ['', Validators.required],
       farmerName: ['', Validators.required],
       visitDate: ['', Validators.required],
+      location: [''],
       notes: ['', Validators.required]
     });
   }
@@ -285,6 +288,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
     return this.fb.group({
       title: ['', Validators.required],
       sessionDate: ['', Validators.required],
+      location: [''],
       category: [null, Validators.required],
       attendances: this.fb.array([])
     });
@@ -552,6 +556,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
           tag: visit.farmerId ?? visit.tag ?? '',
           farmerName: visit.farmerName ?? '',
           visitDate: this.toDateInputValue(visit.visitDate),
+          location: visit.location ?? '',
           notes: visit.notes ?? ''
         });
         this.farmVisits.push(visitGroup);
@@ -564,6 +569,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       sessionGroup.patchValue({
         title: session.title ?? '',
         sessionDate: this.toDateInputValue(session.sessionDate),
+        location: session.location ?? '',
         category: this.normalizeCategory(session.category)
       });
 
@@ -612,6 +618,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       farmerName: visit.farmerName,
       title: visit.title,
       visitDate: visit.visitDate,
+      location: visit.location ?? '',
       notes: visit.notes
     }));
 
@@ -674,6 +681,7 @@ export class CreateReportComponent implements OnInit, OnDestroy {
       farmerName: visit.farmerName,
       title: visit.title,
       visitDate: visit.visitDate,
+      location: visit.location ?? '',
       notes: visit.notes
     }));
 
