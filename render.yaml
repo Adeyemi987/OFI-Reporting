@@ -2,7 +2,8 @@ services:
   - type: web
     name: ofi-reporting
     runtime: static
-    buildCommand: npm ci && npm run build:render
+    # Uses node directly so Render does not depend on the package.json "build:render" script name
+    buildCommand: npm ci && node scripts/render-build.mjs
     staticPublishPath: dist/ofi-reporting/browser
     envVars:
       - key: NODE_VERSION
